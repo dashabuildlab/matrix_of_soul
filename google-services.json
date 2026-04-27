@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "113578995852",
+    "project_id": "matrix-of-destiny-and-tarot",
+    "storage_bucket": "matrix-of-destiny-and-tarot.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:113578995852:android:136e8d596a6272fbef0ba9",
+        "android_client_info": {
+          "package_name": "com.matrixofsoul.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "113578995852-gphg055rh0mopfnub9iosj9d7crfujh1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.matrixofsoul.app",
+            "certificate_hash": "b3513eacbbd8551251a9e3224c8411ee80a82659"
+          }
+        },
+        {
+          "client_id": "113578995852-ipf9rdugglhj2gktr9aplaej3o47ep87.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.matrixofsoul.app",
+            "certificate_hash": "b8e0e0faf65a75bf7cf951495ef488fdd7a52e0c"
+          }
+        },
+        {
+          "client_id": "113578995852-q3q4pvclfgctr8sgeof3olblm7tchhve.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0vgKJCgXrSxd9ZZVXZpl7rQ06Pu2EK5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "113578995852-q3q4pvclfgctr8sgeof3olblm7tchhve.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.matrixofsoul.myapp-",
+                "app_store_id": "6761472357"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
