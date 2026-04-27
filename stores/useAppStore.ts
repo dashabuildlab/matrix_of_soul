@@ -2,18 +2,31 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MatrixData } from '../lib/matrix-calc';
+import { supabase } from '../lib/supabase';
 
-export type Mood = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
+// ── Pending analysis (background PDF generation) ──────────────────────────────
+export type PendingAnalysisStatus = 'generating' | 'ready' | 'error' | 'cancelled';
 
-export interface JournalEntry {
-  id: string;
-  date: string;
-  mood: Mood;
-  energyOfDay: number;
-  reflectionText: string;
-  tarotCardId?: number;
-  aiInsight?: string;
-  createdAt: string;
+export interface PendingAnalysisSection {
+  key: string;
+  title: string;
+  text: string;
+}
+
+export interface PendingAnalysis {
+  matrixId: string;
+  matrixName: string;
+  matrixBirthDate: string;
+  matrixData: MatrixData;
+  locale: 'uk' | 'en';
+  status: PendingAnalysisStatus;
+  progress: number;   // sections completed so far
+  total: number;      // total sections
+  currentSectionTitle: string | null;
+  completedSections: PendingAnalysisSection[];
+  errorMessage?: string;
+  readyToastShown: boolean;
+  startedAt: string;
 }
 
 export interface SavedMatrix {
@@ -70,7 +83,6 @@ const ALL_ACHIEVEMENTS: Achievement[] = [
   { id: 'quiz_master', title: 'Майстер Таро', description: 'Пройдіть вікторину з результатом 100%', icon: '🎯', xp: 200 },
   { id: 'invite_1', title: 'Перший реферал', description: 'Запросіть першого друга', icon: '🤝', xp: 150 },
   { id: 'meditation_5', title: 'Медитатор', description: 'Прослухайте 5 медитацій', icon: '🧘', xp: 100 },
-  { id: 'journal_7', title: 'Хронікер', description: 'Зробіть 7 записів у щоденнику', icon: '📔', xp: 80 },
 ];
 
 interface AppState {
@@ -81,16 +93,14 @@ interface AppState {
   // User profile
   userName: string | null;
   userBirthDate: string | null;
+  knowledgeLevel: 'beginner' | 'intermediate' | 'advanced' | null;
   setUserProfile: (name: string, birthDate: string) => void;
+  pushToServer: () => Promise<void>;
 
   // Matrices
   savedMatrices: SavedMatrix[];
   addMatrix: (matrix: SavedMatrix) => void;
   removeMatrix: (id: string) => void;
-
-  // Journal
-  journalEntries: JournalEntry[];
-  addJournalEntry: (entry: JournalEntry) => void;
 
   // Tarot spreads history
   tarotSpreads: TarotSpread[];
@@ -140,6 +150,28 @@ interface AppState {
   notifications: NotificationItem[];
   addNotification: (notif: NotificationItem) => void;
   markNotificationRead: (id: string) => void;
+
+  // AI consent
+  aiConsentGiven: boolean;
+  setAiConsentGiven: () => void;
+
+  // Background PDF analysis generation
+  pendingAnalysis: PendingAnalysis | null;
+  startAnalysis: (params: {
+    matrixId: string;
+    matrixName: string;
+    matrixBirthDate: string;
+    matrixData: MatrixData;
+    locale: 'uk' | 'en';
+    total: number;
+  }) => void;
+  setAnalysisCurrentSection: (title: string) => void;
+  appendAnalysisSection: (section: PendingAnalysisSection) => void;
+  markAnalysisReady: () => void;
+  markAnalysisError: (message: string) => void;
+  markAnalysisCancelled: () => void;
+  markReadyToastShown: () => void;
+  clearPendingAnalysis: () => void;
 }
 
 export interface NotificationItem {
@@ -163,7 +195,21 @@ export const useAppStore = create<AppState>()(
 
   userName: null,
   userBirthDate: null,
+  knowledgeLevel: null,
   setUserProfile: (name, birthDate) => set({ userName: name, userBirthDate: birthDate }),
+  pushToServer: async () => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await supabase.from('profiles').upsert({
+        id: state.userId,
+        name: state.userName,
+        birth_date: state.userBirthDate,
+        knowledge_level: state.knowledgeLevel,
+        updated_at: new Date().toISOString(),
+      });
+    } catch { /* ignore network errors — local state is already saved */ }
+  },
 
   savedMatrices: [],
   addMatrix: (matrix) =>
@@ -171,12 +217,6 @@ export const useAppStore = create<AppState>()(
   removeMatrix: (id) =>
     set((state) => ({
       savedMatrices: state.savedMatrices.filter((m) => m.id !== id),
-    })),
-
-  journalEntries: [],
-  addJournalEntry: (entry) =>
-    set((state) => ({
-      journalEntries: [entry, ...state.journalEntries],
     })),
 
   tarotSpreads: [],
@@ -311,7 +351,6 @@ export const useAppStore = create<AppState>()(
     if (state.streak >= 30) tryUnlock('streak_30');
     if (state.referralCount >= 1) tryUnlock('invite_1');
     if (state.meditationCount >= 5) tryUnlock('meditation_5');
-    if (state.journalEntries.length >= 7) tryUnlock('journal_7');
 
     return newlyUnlocked;
   },
@@ -328,6 +367,68 @@ export const useAppStore = create<AppState>()(
         n.id === id ? { ...n, read: true } : n
       ),
     })),
+
+  // AI consent
+  aiConsentGiven: false,
+  setAiConsentGiven: () => set({ aiConsentGiven: true }),
+
+  // Background PDF analysis
+  pendingAnalysis: null,
+  startAnalysis: (params) =>
+    set({
+      pendingAnalysis: {
+        ...params,
+        status: 'generating',
+        progress: 0,
+        currentSectionTitle: null,
+        completedSections: [],
+        readyToastShown: false,
+        startedAt: new Date().toISOString(),
+      },
+    }),
+  setAnalysisCurrentSection: (title) =>
+    set((state) => ({
+      pendingAnalysis: state.pendingAnalysis
+        ? { ...state.pendingAnalysis, currentSectionTitle: title }
+        : null,
+    })),
+  appendAnalysisSection: (section) =>
+    set((state) => {
+      if (!state.pendingAnalysis) return {};
+      const completedSections = [...state.pendingAnalysis.completedSections, section];
+      return {
+        pendingAnalysis: {
+          ...state.pendingAnalysis,
+          completedSections,
+          progress: completedSections.length,
+        },
+      };
+    }),
+  markAnalysisReady: () =>
+    set((state) => ({
+      pendingAnalysis: state.pendingAnalysis
+        ? { ...state.pendingAnalysis, status: 'ready' }
+        : null,
+    })),
+  markAnalysisError: (message) =>
+    set((state) => ({
+      pendingAnalysis: state.pendingAnalysis
+        ? { ...state.pendingAnalysis, status: 'error', errorMessage: message }
+        : null,
+    })),
+  markAnalysisCancelled: () =>
+    set((state) => ({
+      pendingAnalysis: state.pendingAnalysis
+        ? { ...state.pendingAnalysis, status: 'cancelled' }
+        : null,
+    })),
+  markReadyToastShown: () =>
+    set((state) => ({
+      pendingAnalysis: state.pendingAnalysis
+        ? { ...state.pendingAnalysis, readyToastShown: true }
+        : null,
+    })),
+  clearPendingAnalysis: () => set({ pendingAnalysis: null }),
     }),
     {
       name: 'matrix-of-soul-v1',
@@ -335,8 +436,8 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         userName: state.userName,
         userBirthDate: state.userBirthDate,
+        knowledgeLevel: state.knowledgeLevel,
         savedMatrices: state.savedMatrices,
-        journalEntries: state.journalEntries,
         tarotSpreads: state.tarotSpreads,
         chatSessions: state.chatSessions,
         activeSessionId: state.activeSessionId,
@@ -354,6 +455,8 @@ export const useAppStore = create<AppState>()(
         unlockedAchievementIds: state.unlockedAchievementIds,
         meditationCount: state.meditationCount,
         notifications: state.notifications,
+        pendingAnalysis: state.pendingAnalysis,
+        aiConsentGiven: state.aiConsentGiven,
       }),
     }
   )

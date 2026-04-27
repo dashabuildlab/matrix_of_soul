@@ -16,6 +16,7 @@ import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAppStore } from '../../stores/useAppStore';
+import { askClaude } from '../../lib/claude';
 
 type Step = 1 | 2 | 3 | 4 | 'result';
 
@@ -46,43 +47,47 @@ interface ConflictResult {
   mainAdvice: string;
 }
 
-function generateConflictResult(data: ConflictData): ConflictResult {
-  const sTypeMap: Record<string, string> = {
-    'Конфлікт': 'конфліктна ситуація',
-    'Непорозуміння': 'непорозуміння',
-    'Вибір': 'ситуація вибору',
-    'Образа': 'образа',
-    'Зрада': 'порушення довіри',
-    'Ревнощі': 'ревнощі',
-    'Маніпуляція': 'маніпулятивна ситуація',
-    'Інше': 'складна ситуація',
-  };
-  const sType = sTypeMap[data.situationType] ?? 'ситуація';
-  const otherRoles = data.otherRoles.join(', ');
+async function analyzeConflictWithAI(data: ConflictData): Promise<ConflictResult> {
+  const systemPrompt = `Ви — AI психолог та езотерик застосунку Matrix of Soul. Ви аналізуєте міжособистісні конфлікти глибоко, персоналізовано та практично. Відповідайте структуровано, з конкретними порадами.`;
 
-  return {
-    objectiveView: `Аналізуючи описану ${sType}, можна виділити декілька ключових аспектів:\n\n1. Кожна сторона діє з власної позиції та переконань\n2. Емоції ускладнюють об'єктивне сприйняття ситуації\n3. Є потреба у відкритому діалозі та взаємному порозумінні\n4. Ситуація має вирішення, якщо обидві сторони готові до змін`,
+  const userPrompt = `Проаналізуй цю ситуацію і надай детальну відповідь у форматі JSON (без коментарів, тільки JSON):
 
-    outsideView: `Якби ви подивились на ситуацію з боку стороннього спостерігача:\n\n👁 Основна причина конфлікту — різниця в очікуваннях і потребах\n🔍 Обидві сторони щось важливе недосказали або не почули\n💡 Справжня проблема може бути глибшою, ніж здається на перший погляд\n🌱 Цей конфлікт — можливість для зростання і глибшого порозуміння`,
+Ситуація:
+- Тип: ${data.situationType}
+- Кількість учасників: ${data.peopleCount}
+- Моя роль: ${data.myRole || 'не вказано'}
+- Роль іншої сторони: ${data.otherRoles.join(', ') || 'не вказано'}
+- Опис: ${data.description}
+- Формат відповіді: ${data.responseFormat || 'збалансований аналіз'}
 
-    recommendations: [
-      {
-        person: `Ви (${data.myRole || 'Учасник 1'})`,
-        advice: `Спробуйте зробити паузу і послухати без захисту. Висловіть свої почуття через "я-повідомлення": "Я відчуваю... коли...". Не намагайтеся перемогти — шукайте рішення разом.`,
-      },
-      {
-        person: `${otherRoles || 'Інша сторона'}`,
-        advice: `Важливо почути і визнати почуття іншої людини, навіть якщо ви не згодні. Будьте готові до чесного діалогу і готовності змінитись.`,
-      },
-    ],
+Поверни JSON такого формату:
+{
+  "objectiveView": "об'єктивна оцінка ситуації (2-4 пункти)",
+  "outsideView": "погляд стороннього спостерігача",
+  "recommendations": [
+    {"person": "моя роль", "advice": "конкретна порада"},
+    {"person": "інша сторона", "advice": "порада для іншої сторони"}
+  ],
+  "righteousnessAnalysis": "аналіз правоти обох сторін",
+  "mainAdvice": "головне послання та наступний крок"
+}`;
 
-    righteousnessAnalysis: `📊 Аналіз ситуації:\n\n✅ Ваша правда: Ваші почуття та потреби абсолютно законні. Ви маєте право на своє бачення ситуації.\n\n⚠️ Зони росту для вас: Можливо, варто переглянути свої очікування та спосіб комунікації.\n\n🔄 Спільна відповідальність: В більшості конфліктів обидві сторони несуть частину відповідальності. Фокус на вирішенні, а не на правоті — найпродуктивніший шлях.`,
+  const raw = await askClaude(systemPrompt, [], userPrompt, 2000);
 
-    mainAdvice: `✨ Головне послання для вас:\n\n${data.situationType === 'Зрада' || data.situationType === 'Образа'
-      ? 'Ваші почуття болю і розчарування цілком природні. Дайте собі час на відновлення. Прощення — це не виправдання дій іншого, а звільнення для себе.'
-      : 'Цей конфлікт — не перешкода, а учитель. Кожна складна ситуація в стосунках — можливість глибше пізнати себе і зміцнити зв\'язок.'
-    }\n\n🌟 Наступний крок: Знайдіть спокійний момент для відкритої розмови. Почніть з "Я хочу вирішити це між нами, бо наш зв'язок для мене важливий."`,
-  };
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('no JSON');
+    return JSON.parse(jsonMatch[0]) as ConflictResult;
+  } catch {
+    // Fallback: wrap the raw text in the result structure
+    return {
+      objectiveView: raw,
+      outsideView: '',
+      recommendations: [],
+      righteousnessAnalysis: '',
+      mainAdvice: '',
+    };
+  }
 }
 
 export default function ConflictScreen() {
@@ -93,6 +98,7 @@ export default function ConflictScreen() {
   const tokens = useAppStore((s) => s.tokens);
   const isPremium = useAppStore((s) => s.isPremium);
   const useToken = useAppStore((s) => s.useToken);
+  const addTokens = useAppStore((s) => s.addTokens);
 
   const [data, setData] = useState<ConflictData>({
     peopleCount: '2',
@@ -115,12 +121,22 @@ export default function ConflictScreen() {
       ]);
       return;
     }
-    setLoading(true);
-    if (!isPremium) { useToken(); useToken(); }
-    await new Promise((r) => setTimeout(r, 2000));
-    setResult(generateConflictResult(data));
-    setLoading(false);
-    setStep('result');
+
+    try {
+      setLoading(true);
+      if (!isPremium) { useToken(); useToken(); }
+
+      const analysisResult = await analyzeConflictWithAI(data);
+      setResult(analysisResult);
+      setStep('result');
+    } catch (err) {
+      // Refund tokens since AI call failed
+      if (!isPremium) addTokens(2);
+      const msg = err instanceof Error ? err.message : 'Невідома помилка';
+      Alert.alert('Помилка аналізу', msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const progressPercent = step === 'result' ? 100 : ((step as number) / 4) * 100;

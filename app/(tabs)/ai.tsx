@@ -63,6 +63,15 @@ export default function AIScreen() {
   const tokens = useAppStore((s) => s.tokens);
   const isPremium = useAppStore((s) => s.isPremium);
   const chatSessions = useAppStore((s) => s.chatSessions);
+  const aiConsentGiven = useAppStore((s) => s.aiConsentGiven);
+
+  const navigateToAI = (route: string) => {
+    if (!aiConsentGiven) {
+      router.push((`/ai/disclosure?next=${encodeURIComponent(route)}`) as any);
+    } else {
+      router.push(route as any);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -108,7 +117,7 @@ export default function AIScreen() {
             key={item.title}
             style={styles.featureItem}
             activeOpacity={0.7}
-            onPress={() => router.push(item.route as any)}
+            onPress={() => navigateToAI(item.route)}
           >
             <LinearGradient
               colors={item.gradient}
@@ -140,7 +149,7 @@ export default function AIScreen() {
               activeOpacity={0.7}
               onPress={() => {
                 useAppStore.getState().setActiveSession(session.id);
-                router.push('/ai/chat');
+                navigateToAI('/ai/chat');
               }}
             >
               <Card style={styles.chatItem}>
@@ -188,7 +197,7 @@ export default function AIScreen() {
       {/* Conflict Resolution CTA */}
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => router.push('/ai/conflict')}
+        onPress={() => navigateToAI('/ai/conflict')}
       >
         <LinearGradient
           colors={['#2D1B69', '#4C1D95', '#6D28D9']}

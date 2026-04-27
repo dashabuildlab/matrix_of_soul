@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,47 +16,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { useAppStore, ChatMessage, AIChatSession } from '../../stores/useAppStore';
+import { askClaude, type ClaudeMessage } from '../../lib/claude';
 import { getDailyEnergy } from '../../lib/matrix-calc';
-import { getEnergyById } from '../../constants/energies';
-import { drawRandomCards } from '../../constants/tarotData';
 
-const AI_PERSONAS = [
-  'Ваш AI Езотерик',
-  'Майстер Таро',
-  'Провідник Матриці',
-  'Мудрець Долі',
-];
+function buildSystemPrompt(userName: string | null, userBirthDate: string | null, matrixSummary: string): string {
+  const dailyEnergy = getDailyEnergy();
+  return `Ви — AI Езотерик застосунку Matrix of Soul. Ви глибокий знавець Матриці Долі, Таро, нумерології та езотеричних практик.
 
-function generateAIResponse(userMessage: string, context: string): string {
-  const lower = userMessage.toLowerCase();
-  const daily = getDailyEnergy();
-  const energy = getEnergyById(daily);
-  const card = drawRandomCards(1)[0];
+Профіль користувача:
+- Ім'я: ${userName ?? 'невідоме'}
+- Дата народження: ${userBirthDate ?? 'невідома'}
+- Енергія поточного дня: ${dailyEnergy}
+${matrixSummary ? `\nМатриця долі:\n${matrixSummary}` : ''}
 
-  if (lower.includes('любов') || lower.includes('стосунк') || lower.includes('партнер')) {
-    return `💜 Енергія дня (${daily}. ${energy?.name}) говорить про ${energy?.keywords[0]} у ваших стосунках.\n\nКарта ${card.nameUk} вказує: ${card.loveAdvice}\n\n✨ Порада: ${energy?.advice}\n\nПам'ятайте — щире серце завжди знаходить свій шлях. Будьте відкриті до нового, і Всесвіт відповість вам тим же.`;
-  }
-
-  if (lower.includes('робот') || lower.includes('кар\'єр') || lower.includes('гроші') || lower.includes('фінанс')) {
-    return `💼 У сфері кар'єри зараз активна енергія ${daily} — ${energy?.name}.\n\nВаша карта: ${card.nameUk}\n\n📊 ${card.careerAdvice}\n\n💡 Порада на сьогодні: ${energy?.positive}\n\nОстерігайтесь: ${energy?.negative}`;
-  }
-
-  if (lower.includes('так чи ні') || lower.includes('так/ні') || lower.includes('чи варто')) {
-    const answer = card.yesNo === 'yes' ? '✅ ТАК' : card.yesNo === 'no' ? '❌ НІ' : '🔄 ПОКИ НЕ ЧАС';
-    return `🎴 Карта відповіді: ${card.nameUk}\n\n${answer}\n\n${card.upright}\n\n✨ ${card.advice}`;
-  }
-
-  if (lower.includes('майбутнє') || lower.includes('що буде') || lower.includes('прогноз')) {
-    const cards = drawRandomCards(3);
-    return `🔮 Три карти вашого прогнозу:\n\n⟨ Минуле: ${cards[0].nameUk} — ${cards[0].keywords[0]}\n⟩ Теперішнє: ${cards[1].nameUk} — ${cards[1].keywords[0]}\n⟫ Майбутнє: ${cards[2].nameUk} — ${cards[2].keywords[0]}\n\n${cards[2].upright}\n\n✨ Загальна порада: ${cards[1].advice}`;
-  }
-
-  if (lower.includes('матриц') || lower.includes('енергі') || lower.includes('доля') || lower.includes('призначення')) {
-    return `🌟 Ваша енергія дня — ${daily}. ${energy?.name}\n\nЦе архетип ${energy?.arcana} (${energy?.planet}).\n\n✨ У плюсі: ${energy?.positive}\n⚠️ У мінусі: ${energy?.negative}\n\n📿 Порада: ${energy?.advice}\n\nКлючові слова: ${energy?.keywords.join(', ')}.`;
-  }
-
-  // Default esoteric response
-  return `🔮 Зараз активна енергія ${daily} — ${energy?.name}, і вона резонує з вашим питанням.\n\nКарта, що з'явилась: ${card.nameUk}\n\n${card.upright}\n\n✨ Порада для вас: ${card.advice}\n\nВсесвіт завжди відповідає тим, хто готовий слухати. Довіртеся своїй інтуїції — вона вже знає правильний шлях.`;
+Правила:
+- Відповідайте тепло, духовно та персоналізовано
+- Використовуйте символи (✨ 💜 🔮 🌟 🃏) помірно
+- Якщо є дані матриці — спирайтесь на них у відповіді
+- Відповідайте мовою питання (українська або англійська)
+- Будьте конкретними та практичними, не лише поетичними
+- Якщо питання не стосується езотерики — делікатно поверніться до теми`;
 }
 
 const QUICK_QUESTIONS = [
@@ -77,13 +56,21 @@ export default function AIChatScreen() {
   const tokens = useAppStore((s) => s.tokens);
   const isPremium = useAppStore((s) => s.isPremium);
   const useToken = useAppStore((s) => s.useToken);
+  const addTokens = useAppStore((s) => s.addTokens);
   const addChatSession = useAppStore((s) => s.addChatSession);
   const addMessageToSession = useAppStore((s) => s.addMessageToSession);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
   const chatSessions = useAppStore((s) => s.chatSessions);
   const setActiveSession = useAppStore((s) => s.setActiveSession);
+  const userName = useAppStore((s) => s.userName);
+  const userBirthDate = useAppStore((s) => s.userBirthDate);
+  const savedMatrices = useAppStore((s) => s.savedMatrices);
 
   const currentSession = chatSessions.find((s) => s.id === activeSessionId);
+
+  const matrixSummary = savedMatrices[0]
+    ? `Особистість: ${savedMatrices[0].data.personality}, Душа: ${savedMatrices[0].data.soul}, Доля: ${savedMatrices[0].data.destiny}, Призначення: ${savedMatrices[0].data.purpose}`
+    : '';
 
   useEffect(() => {
     if (!activeSessionId) {
@@ -109,7 +96,7 @@ export default function AIChatScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [currentSession?.messages.length]);
 
-  const sendMessage = async (text?: string) => {
+  const sendMessage = useCallback(async (text?: string) => {
     const msg = text ?? input.trim();
     if (!msg) return;
 
@@ -125,7 +112,9 @@ export default function AIChatScreen() {
       return;
     }
 
-    const sessionId = activeSessionId!;
+    const sessionId = activeSessionId;
+    if (!sessionId) return;
+
     if (!text) setInput('');
 
     const userMsg: ChatMessage = {
@@ -135,21 +124,34 @@ export default function AIChatScreen() {
       createdAt: new Date().toISOString(),
     };
     addMessageToSession(sessionId, userMsg);
-
     setIsLoading(true);
     useToken();
 
-    await new Promise((r) => setTimeout(r, 1200 + Math.random() * 800));
+    try {
+      const history: ClaudeMessage[] = (currentSession?.messages ?? [])
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .slice(-10)
+        .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-    const aiMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: generateAIResponse(msg, 'general'),
-      createdAt: new Date().toISOString(),
-    };
-    addMessageToSession(sessionId, aiMsg);
-    setIsLoading(false);
-  };
+      const systemPrompt = buildSystemPrompt(userName, userBirthDate, matrixSummary);
+      const aiText = await askClaude(systemPrompt, history, msg, 1500);
+
+      const aiMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: aiText || '✨ Всесвіт мовчить. Спробуйте перефразувати питання.',
+        createdAt: new Date().toISOString(),
+      };
+      addMessageToSession(sessionId, aiMsg);
+    } catch (err) {
+      // Refund the token since the AI call failed
+      if (!isPremium) addTokens(1);
+      const errMsg = err instanceof Error ? err.message : 'Невідома помилка';
+      Alert.alert('Помилка AI', errMsg, [{ text: 'OK' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeSessionId, input, isPremium, tokens, currentSession, userName, userBirthDate, matrixSummary]);
 
   const messages = currentSession?.messages ?? [];
 
