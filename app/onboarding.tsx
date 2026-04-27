@@ -82,9 +82,9 @@ const slides: Slide[] = [
     tagline: 'Задавай будь-які питання',
     features: [
       { icon: 'chatbubble-ellipses-outline', title: 'AI Чат', subtitle: 'відповіді 24/7' },
-      { icon: 'journal-outline', title: 'Журнал Душі', subtitle: 'зберігай відкриття' },
       { icon: 'flame-outline', title: 'Щоденна Серія', subtitle: 'та нагороди' },
       { icon: 'sunny-outline', title: 'Прогноз Дня', subtitle: 'енергія кожного дня' },
+      { icon: 'musical-notes-outline', title: 'Медитації', subtitle: 'звук та спокій' },
     ],
     ctaText: 'Продовжити',
   },
@@ -94,7 +94,7 @@ const slides: Slide[] = [
     centerIcon: 'diamond-outline',
     title: 'Почни свій шлях',
     titleHighlight: 'сьогодні',
-    tagline: 'Безкоштовно та без реєстрації',
+    tagline: 'Розпочни безкоштовно вже сьогодні',
     ctaText: 'Почати',
   },
 ];

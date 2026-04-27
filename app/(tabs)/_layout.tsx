@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize } from '../../constants/theme';
 
 function CenterTabIcon({ focused }: { focused: boolean }) {
@@ -20,6 +21,9 @@ function CenterTabIcon({ focused }: { focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
+
   return (
     <Tabs
       screenOptions={{
@@ -29,9 +33,9 @@ export default function TabLayout() {
           backgroundColor: Colors.bg,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          paddingBottom: 8,
+          paddingBottom: insets.bottom + 4,
           paddingTop: 8,
-          height: 88,
+          height: tabBarHeight,
         },
         tabBarLabelStyle: {
           fontSize: FontSize.xs,
@@ -76,9 +80,9 @@ export default function TabLayout() {
             backgroundColor: Colors.bg,
             borderTopColor: Colors.border,
             borderTopWidth: 1,
-            paddingBottom: 8,
+            paddingBottom: insets.bottom + 4,
             paddingTop: 8,
-            height: 88,
+            height: tabBarHeight,
           },
         }}
       />
@@ -101,10 +105,6 @@ export default function TabLayout() {
         }}
       />
       {/* Hidden tabs (still accessible as routes) */}
-      <Tabs.Screen
-        name="journal"
-        options={{ href: null }}
-      />
       <Tabs.Screen
         name="learn"
         options={{ href: null }}

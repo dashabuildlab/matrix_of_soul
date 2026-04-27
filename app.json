@@ -2,7 +2,7 @@
   "expo": {
     "name": "Matrix of Soul",
     "slug": "matrix-of-soul",
-    "version": "1.0.0",
+    "version": "1.0.30",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -14,14 +14,41 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.matrixofsoul.app"
+      "bundleIdentifier": "com.matrixofsoul.myapp-",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "buildNumber": "30",
+      "minimumOsVersion": "16.0",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "Ми використовуємо дані для покращення досвіду та персоналізації контенту в межах застосунку.",
+        "NSPhotoLibraryUsageDescription": "Для збереження та обміну результатами розкладів.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          }
+        ],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyTracking": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A1A"
       },
-      "package": "com.matrixofsoul.app"
+      "package": "com.matrixofsoul.app",
+      "versionCode": 30
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -29,7 +56,11 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
+      "expo-audio",
+      "expo-apple-authentication"
     ]
   }
 }

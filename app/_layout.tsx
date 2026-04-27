@@ -5,6 +5,7 @@ import { ActivityIndicator, View, Text, Animated, TouchableOpacity } from 'react
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { Colors } from '../constants/theme';
+import { initializePurchases } from '../lib/purchases';
 import { supabase } from '../lib/supabase';
 import { useAppStore, Achievement } from '../stores/useAppStore';
 import type { Session } from '@supabase/supabase-js';
@@ -122,50 +123,70 @@ export default function RootLayout() {
   const storeAuthenticated = useAppStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    SecureStore.getItemAsync('onboarding_done').then((val) => {
-      setOnboardingDone(val === 'true');
-    });
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        useAppStore.setState({ isAuthenticated: true, userId: session.user.id });
-
-        // Check streak & gamification on session load
-        const result = checkAndUpdateStreak();
-        if (result.isNewDay) {
-          if (!result.streakBroken && result.newStreak > 1) {
-            setTimeout(() => setStreakToast(result.newStreak), 800);
-          }
-          // Check achievements
-          setTimeout(() => {
-            const newAchievements = checkAchievements();
-            if (newAchievements.length > 0) {
-              setAchievementToast(newAchievements[0]);
-            }
-          }, result.newStreak > 1 ? 4500 : 800);
-
-          // Add daily affirmation in-app notification
-          const affirmation = DAILY_AFFIRMATIONS[new Date().getDay() % DAILY_AFFIRMATIONS.length];
-          addNotification({
-            id: `affirmation_${Date.now()}`,
-            title: 'Афірмація дня',
-            body: affirmation,
-            type: 'affirmation',
-            read: false,
-            createdAt: new Date().toISOString(),
-          });
-        }
+    const init = async () => {
+      try {
+        const val = await SecureStore.getItemAsync('onboarding_done');
+        setOnboardingDone(val === 'true');
+      } catch {
+        setOnboardingDone(false);
       }
-      setLoading(false);
-    });
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        if (session) {
+          useAppStore.setState({ isAuthenticated: true, userId: session.user.id });
+          initializePurchases(session.user.id);
+
+          const result = checkAndUpdateStreak();
+          if (result.isNewDay) {
+            if (!result.streakBroken && result.newStreak > 1) {
+              const t = setTimeout(() => setStreakToast(result.newStreak), 800);
+              timers.push(t);
+            }
+            // Show all unlocked achievements sequentially with 3s gap
+            const delay = result.newStreak > 1 ? 4500 : 800;
+            const t = setTimeout(() => {
+              const newAchievements = checkAchievements();
+              newAchievements.forEach((ach, idx) => {
+                const at = setTimeout(() => setAchievementToast(ach), idx * 3000);
+                timers.push(at);
+              });
+            }, delay);
+            timers.push(t);
+
+            const affirmation = DAILY_AFFIRMATIONS[new Date().getDay() % DAILY_AFFIRMATIONS.length];
+            addNotification({
+              id: `affirmation_${Date.now()}`,
+              title: 'Афірмація дня',
+              body: affirmation,
+              type: 'affirmation',
+              read: false,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      } catch {
+        // Session unavailable — user will be routed to login
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       useAppStore.setState({ isAuthenticated: !!session, userId: session?.user.id ?? null });
+      if (session) initializePurchases(session.user.id);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      timers.forEach(clearTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading || onboardingDone === null) {
@@ -178,7 +199,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <Stack screenOptions={{
         headerStyle: { backgroundColor: Colors.bg },
         headerTintColor: Colors.text,
@@ -197,6 +218,7 @@ export default function RootLayout() {
         <Stack.Screen name="matrix/compatibility" options={{ title: 'Сумісність', presentation: 'modal' }} />
         <Stack.Screen name="matrix/daily" options={{ title: 'Матриця Дня' }} />
         <Stack.Screen name="matrix/referral" options={{ title: 'Реферальна програма' }} />
+        <Stack.Screen name="matrix/analysis" options={{ title: 'Аналіз Матриці' }} />
 
         {/* Tarot */}
         <Stack.Screen name="tarot/spread" options={{ title: 'Розклад Таро', presentation: 'modal' }} />
@@ -207,6 +229,7 @@ export default function RootLayout() {
         <Stack.Screen name="tarot/astro" options={{ title: 'Астропрогноз' }} />
 
         {/* AI */}
+        <Stack.Screen name="ai/disclosure" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="ai/chat" options={{ headerShown: false }} />
         <Stack.Screen name="ai/conflict" options={{ title: 'Аналіз Конфлікту', presentation: 'modal' }} />
 
@@ -215,15 +238,14 @@ export default function RootLayout() {
 
         {/* Profile */}
         <Stack.Screen name="profile/achievements" options={{ title: 'Досягнення та нагороди' }} />
+        <Stack.Screen name="profile/account" options={{ title: 'Редагувати профіль' }} />
+        <Stack.Screen name="profile/about" options={{ headerShown: false }} />
 
         {/* Utility */}
         <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="meditation" options={{ title: 'Медитації' }} />
         <Stack.Screen name="share" options={{ title: 'Поділитись', presentation: 'modal' }} />
 
-        {/* Journal */}
-        <Stack.Screen name="journal/new" options={{ title: 'Новий Запис', presentation: 'modal' }} />
-        <Stack.Screen name="journal/[id]" options={{ title: 'Запис' }} />
       </Stack>
 
       {achievementToast && (

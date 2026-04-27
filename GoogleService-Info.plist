@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>113578995852-gphg055rh0mopfnub9iosj9d7crfujh1.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBjQnsHLLE110Ze1YubKaFjocfGWGAbE8s</string>
+	<key>GCM_SENDER_ID</key>
+	<string>113578995852</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.matrixofsoul.myapp-</string>
+	<key>PROJECT_ID</key>
+	<string>matrix-of-destiny-and-tarot</string>
+	<key>STORAGE_BUCKET</key>
+	<string>matrix-of-destiny-and-tarot.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<true></true>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:113578995852:ios:7d5516908edcda3aef0ba9</string>
+</dict>
+</plist>
