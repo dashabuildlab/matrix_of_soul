@@ -79,5 +79,14 @@ export async function askClaude(
 
   const data = await res.json();
   const text: string = data.content?.[0]?.text ?? '';
+
+  // Detect hard truncation — Claude hit the token ceiling mid-response.
+  // This causes incomplete sentences / missing final paragraphs in the PDF.
+  if (data.stop_reason === 'max_tokens') {
+    throw new Error(
+      `TRUNCATED:max_tokens — Claude відповідь обрізана (ліміт ${maxTokens} токенів). Розділ не завершений.`,
+    );
+  }
+
   return text;
 }

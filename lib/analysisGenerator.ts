@@ -113,7 +113,9 @@ async function _runLoop(startIndex: number): Promise<void> {
 
       let text = '';
       let attempt = 0;
-      // Per-section retry — up to 3 attempts with backoff
+      // Per-section retry — up to 3 attempts with backoff.
+      // On TRUNCATED error we double the token budget (Claude hit the ceiling).
+      let tokenBudget = section.maxTokens;
       while (true) {
         if (_cancelled) return;
         attempt++;
@@ -122,15 +124,21 @@ async function _runLoop(startIndex: number): Promise<void> {
             systemPrompt,
             [] as ClaudeMessage[],
             prompt,
-            section.maxTokens,
+            tokenBudget,
           );
           break;
         } catch (err: any) {
-          const msg = err?.message ?? String(err);
+          const msg: string = err?.message ?? String(err);
           console.warn(`[analysisGenerator] section ${i + 1} attempt ${attempt} failed: ${msg}`);
           if (attempt >= 3) throw err;
-          const backoff = attempt * 5000;
-          await new Promise(r => setTimeout(r, backoff));
+          // If Claude was cut off by the token limit, double the budget and retry immediately.
+          if (msg.startsWith('TRUNCATED:max_tokens')) {
+            tokenBudget = Math.min(tokenBudget * 2, 4096);
+            console.warn(`[analysisGenerator] retrying section ${i + 1} with tokenBudget=${tokenBudget}`);
+          } else {
+            const backoff = attempt * 5000;
+            await new Promise(r => setTimeout(r, backoff));
+          }
         }
       }
 
