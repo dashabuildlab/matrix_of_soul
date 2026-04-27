@@ -10,19 +10,19 @@ export default function Index() {
 
   useEffect(() => {
     const decide = async () => {
-      const onboardingDone = await SecureStore.getItemAsync('onboarding_done');
-      if (onboardingDone !== 'true') {
+      try {
+        const onboardingDone = await SecureStore.getItemAsync('onboarding_done');
+        if (onboardingDone !== 'true') {
+          setRoute('/onboarding');
+          return;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        setRoute(session ? '/(tabs)/matrix' : '/auth/login');
+      } catch {
+        // On any error fall back to onboarding so the user is never stuck
         setRoute('/onboarding');
-        return;
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setRoute('/auth/login');
-        return;
-      }
-
-      setRoute('/(tabs)/matrix');
     };
     decide();
   }, []);

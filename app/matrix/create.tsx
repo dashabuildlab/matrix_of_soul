@@ -26,18 +26,22 @@ export default function CreateMatrixScreen() {
   const [result, setResult] = useState<ReturnType<typeof calculateMatrix> | null>(null);
 
   const handleCalculate = () => {
-    const d = parseInt(day);
-    const m = parseInt(month);
-    const y = parseInt(year);
+    const d = parseInt(day, 10);
+    const m = parseInt(month, 10);
+    const y = parseInt(year, 10);
 
-    if (!d || !m || !y || d > 31 || m > 12 || y < 1900 || y > 2030) {
+    if (isNaN(d) || isNaN(m) || isNaN(y) || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2030) {
       Alert.alert('Помилка', 'Введіть коректну дату народження');
       return;
     }
 
-    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const matrix = calculateMatrix(dateStr);
-    setResult(matrix);
+    try {
+      const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const matrix = calculateMatrix(dateStr);
+      setResult(matrix);
+    } catch {
+      Alert.alert('Помилка', 'Не вдалося розрахувати матрицю. Перевірте дату.');
+    }
   };
 
   const handleSave = () => {
