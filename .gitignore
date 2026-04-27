@@ -30,7 +30,43 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
 *.tsbuildinfo
+
+# ── SECRETS & CREDENTIALS ─────────────────────────────────────────────────────
+credentials.json
+deploy_key
+deploy_key.pub
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+
+# ── INTERNAL SCRIPTS ──────────────────────────────────────────────────────────
+.kill-expo.sh
+rebuild-server.bat
+start-api.bat
+build-android.ps1
+build-android-apk.ps1
+expo-tunnel.bat
+expo-tunnel.bat.backup
+check_server.py
+deploy.py
+deploy_merged.py
+deploy_seo.py
+test_ssh.py
+upload_dist.py
+
+# ── CLAUDE / AI INTERNAL ──────────────────────────────────────────────────────
+CLAUDE.md
+
+# ── SEPARATE PROJECTS (own repos) ────────────────────────────────────────────
+seo-website/
+website/
+
+# ── ANDROID RELEASE KEYSTORE ─────────────────────────────────────────────────
+android/app/release.keystore
+android/credentials/
