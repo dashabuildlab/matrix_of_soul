@@ -50,43 +50,47 @@ export default function RegisterScreen() {
       return;
     }
 
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: { name: name.trim() },
-      },
-    });
-    setLoading(false);
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { name: name.trim() },
+        },
+      });
 
-    if (error) {
-      Alert.alert('Помилка реєстрації', error.message);
-      return;
-    }
+      if (error) {
+        Alert.alert('Помилка реєстрації', error.message ?? 'Невідома помилка');
+        return;
+      }
 
-    // Save user profile to local store
-    if (name.trim()) {
-      setUserProfile(name.trim(), birthDate.trim() || '');
-    }
+      // Save user profile to local store
+      if (name.trim()) {
+        setUserProfile(name.trim(), birthDate.trim() || '');
+      }
 
-    // Update profile in Supabase
-    if (data.user) {
-      await supabase
-        .from('profiles')
-        .update({ name: name.trim(), birth_date: birthDate.trim() || null })
-        .eq('id', data.user.id);
-    }
+      // Update profile in Supabase (non-critical, ignore failure)
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .update({ name: name.trim(), birth_date: birthDate.trim() || null })
+          .eq('id', data.user.id);
+      }
 
-    // If email confirmation is required
-    if (data.session) {
-      // Auto-logged in, auth listener will handle navigation
-    } else {
-      Alert.alert(
-        'Перевірте пошту',
-        'Ми надіслали лист для підтвердження на ' + email.trim(),
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      // If email confirmation is required
+      if (!data.session) {
+        Alert.alert(
+          'Перевірте пошту',
+          'Ми надіслали лист для підтвердження на ' + email.trim(),
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Помилка мережі. Перевірте з\'єднання.';
+      Alert.alert('Помилка', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
