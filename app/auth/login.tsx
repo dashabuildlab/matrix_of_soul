@@ -190,6 +190,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              testID="login-email-input"
             />
           </View>
 
@@ -202,15 +203,16 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              testID="login-password-input"
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
               <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          <Button title="Увійти" onPress={handleLogin} loading={loading} />
+          <Button title="Увійти" onPress={handleLogin} loading={loading} testID="login-submit-btn" />
 
-          <TouchableOpacity onPress={handleSkip} style={styles.skipBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={handleSkip} style={styles.skipBtn} activeOpacity={0.7} testID="login-skip-btn">
             <Text style={styles.skipText}>Зареєструватися пізніше</Text>
           </TouchableOpacity>
 
@@ -227,6 +229,7 @@ export default function LoginScreen() {
               activeOpacity={0.7}
               onPress={handleAppleSignIn}
               disabled={loadingApple}
+              testID="login-apple-btn"
             >
               <Ionicons name="logo-apple" size={22} color={Colors.text} />
               <Text style={styles.socialText}>
@@ -240,6 +243,7 @@ export default function LoginScreen() {
             activeOpacity={0.7}
             onPress={handleGoogleSignIn}
             disabled={loadingGoogle}
+            testID="login-google-btn"
           >
             <Ionicons name="logo-google" size={22} color="#A78BFA" />
             <Text style={styles.socialText}>
@@ -250,7 +254,7 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Немає акаунту? </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <TouchableOpacity onPress={() => router.push('/auth/register')} testID="login-register-link">
             <Text style={styles.footerLink}>Зареєструватися</Text>
           </TouchableOpacity>
         </View>

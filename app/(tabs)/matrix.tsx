@@ -29,7 +29,7 @@ export default function MatrixScreen() {
   const level = useAppStore((s) => s.level);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} testID="matrix-tab-screen">
 
       {/* Gamification mini-bar */}
       <TouchableOpacity activeOpacity={0.8} onPress={() => router.push('/profile/achievements')}>
@@ -77,14 +77,14 @@ export default function MatrixScreen() {
       {/* Actions */}
       <Text style={styles.sectionTitle}>Матриця</Text>
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionCard} activeOpacity={0.7} onPress={() => router.push('/matrix/create')}>
+        <TouchableOpacity style={styles.actionCard} activeOpacity={0.7} onPress={() => router.push('/matrix/create')} testID="matrix-create-btn">
           <LinearGradient colors={[Colors.primaryDark, Colors.primary]} style={styles.actionGradient}>
             <Ionicons name="add-circle-outline" size={32} color={Colors.text} />
             <Text style={styles.actionTitle}>Створити{'\n'}Матрицю</Text>
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard} activeOpacity={0.7} onPress={() => router.push('/matrix/compatibility')}>
+        <TouchableOpacity style={styles.actionCard} activeOpacity={0.7} onPress={() => router.push('/matrix/compatibility')} testID="matrix-compatibility-btn">
           <LinearGradient colors={['#831843', '#BE185D']} style={styles.actionGradient}>
             <Ionicons name="heart-outline" size={32} color="#FCE7F3" />
             <Text style={[styles.actionTitle, { color: '#FCE7F3' }]}>Сумісність{'\n'}Пар</Text>
@@ -94,7 +94,7 @@ export default function MatrixScreen() {
 
       {/* Quick links */}
       <View style={styles.quickRow}>
-        <TouchableOpacity style={styles.quickItem} activeOpacity={0.7} onPress={() => router.push('/matrix/daily')}>
+        <TouchableOpacity style={styles.quickItem} activeOpacity={0.7} onPress={() => router.push('/matrix/daily')} testID="matrix-daily-btn">
           <Card style={styles.quickCard}>
             <Ionicons name="today-outline" size={22} color={Colors.primary} />
             <Text style={styles.quickLabel}>Матриця{'\n'}Дня</Text>
@@ -151,7 +151,7 @@ export default function MatrixScreen() {
       )}
 
       {savedMatrices.length === 0 && (
-        <Card style={styles.emptyCard}>
+        <Card style={styles.emptyCard} testID="matrix-empty-state">
           <Ionicons name="grid-outline" size={40} color={Colors.primaryMuted} />
           <Text style={styles.emptyTitle}>Немає матриць</Text>
           <Text style={styles.emptyText}>Створіть свою першу матрицю долі і відкрийте своє призначення</Text>

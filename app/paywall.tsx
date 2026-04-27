@@ -129,7 +129,7 @@ export default function PaywallScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+      <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} testID="paywall-close-btn">
         <Ionicons name="close" size={24} color={Colors.textMuted} />
       </TouchableOpacity>
 
@@ -194,6 +194,7 @@ export default function PaywallScreen() {
                 style={[styles.planCard, isSelected && styles.planCardSelected]}
                 onPress={() => setSelected(pkg)}
                 activeOpacity={0.8}
+                testID={`paywall-plan-${pkg.packageType}`}
               >
                 <LinearGradient
                   colors={isSelected
@@ -252,6 +253,7 @@ export default function PaywallScreen() {
           onPress={handleSubscribe}
           disabled={purchasing || !selected || loading}
           activeOpacity={0.8}
+          testID="paywall-subscribe-btn"
         >
           <LinearGradient
             colors={['#7C3AED', '#6D28D9', '#5B21B6']}
@@ -271,7 +273,7 @@ export default function PaywallScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleRestore} disabled={restoring} style={styles.restoreBtn}>
+        <TouchableOpacity onPress={handleRestore} disabled={restoring} style={styles.restoreBtn} testID="paywall-restore-btn">
           {restoring
             ? <ActivityIndicator color={Colors.primary} size="small" />
             : <Text style={styles.restoreText}>Відновити покупки</Text>

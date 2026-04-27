@@ -65,6 +65,7 @@ export default function CreateMatrixScreen() {
         onChangeText={setName}
         placeholder="Наприклад: Моя матриця"
         placeholderTextColor={Colors.textMuted}
+        testID="matrix-name-input"
       />
 
       <Text style={styles.label}>Дата народження</Text>
@@ -77,6 +78,7 @@ export default function CreateMatrixScreen() {
           placeholderTextColor={Colors.textMuted}
           keyboardType="number-pad"
           maxLength={2}
+          testID="matrix-day-input"
         />
         <TextInput
           style={[styles.input, styles.dateInput]}
@@ -86,6 +88,7 @@ export default function CreateMatrixScreen() {
           placeholderTextColor={Colors.textMuted}
           keyboardType="number-pad"
           maxLength={2}
+          testID="matrix-month-input"
         />
         <TextInput
           style={[styles.input, styles.yearInput]}
@@ -95,6 +98,7 @@ export default function CreateMatrixScreen() {
           placeholderTextColor={Colors.textMuted}
           keyboardType="number-pad"
           maxLength={4}
+          testID="matrix-year-input"
         />
       </View>
 
@@ -102,10 +106,11 @@ export default function CreateMatrixScreen() {
         title="Розрахувати"
         onPress={handleCalculate}
         style={{ marginTop: Spacing.lg }}
+        testID="matrix-calculate-btn"
       />
 
       {result && (
-        <View style={styles.resultSection}>
+        <View style={styles.resultSection} testID="matrix-result-section">
           <Text style={styles.resultTitle}>Результат</Text>
 
           <Card style={styles.resultCard}>
@@ -141,6 +146,7 @@ export default function CreateMatrixScreen() {
             title="Зберегти Матрицю"
             onPress={handleSave}
             style={{ marginTop: Spacing.lg }}
+            testID="matrix-save-btn"
           />
         </View>
       )}

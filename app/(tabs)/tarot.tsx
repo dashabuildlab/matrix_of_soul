@@ -110,10 +110,11 @@ export default function TarotScreen() {
             onPress={drawDailyCard}
             loading={isRevealing}
             style={{ marginTop: Spacing.md, alignSelf: 'stretch' }}
+            testID="tarot-draw-card-btn"
           />
         </Card>
       ) : (
-        <Card style={styles.revealedCard}>
+        <Card style={styles.revealedCard} testID="tarot-revealed-card">
           <View style={styles.revealedRow}>
             <View style={styles.cardImageBox}>
               <Text style={styles.cardNumber}>{dailyCard.card.id}</Text>
@@ -171,6 +172,7 @@ export default function TarotScreen() {
             style={styles.aiSpreadItem}
             activeOpacity={0.7}
             onPress={() => router.push(spread.route as any)}
+            testID={`tarot-spread-${spread.route.replace('/tarot/', '')}`}
           >
             <LinearGradient colors={spread.gradient} style={styles.aiSpreadGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <Text style={styles.aiSpreadEmoji}>{spread.emoji}</Text>
@@ -199,7 +201,7 @@ export default function TarotScreen() {
       </TouchableOpacity>
 
       {/* History */}
-      <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/tarot/history')}>
+      <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/tarot/history')} testID="tarot-history-btn">
         <Card style={styles.historyCard}>
           <Ionicons name="time-outline" size={24} color={Colors.primary} />
           <View style={{ flex: 1 }}>

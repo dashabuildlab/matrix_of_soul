@@ -177,6 +177,7 @@ export default function AIChatScreen() {
           <TouchableOpacity
             onPress={() => router.push('/paywall')}
             style={styles.tokenBadge}
+            testID="ai-token-badge"
           >
             <Ionicons name="diamond" size={12} color={Colors.accent} />
             <Text style={styles.tokenCount}>{tokens}</Text>
@@ -185,6 +186,7 @@ export default function AIChatScreen() {
         <TouchableOpacity
           style={styles.newChatBtn}
           onPress={() => setActiveSession(null)}
+          testID="ai-new-chat-btn"
         >
           <Ionicons name="add-circle-outline" size={22} color={Colors.text} />
         </TouchableOpacity>
@@ -196,6 +198,7 @@ export default function AIChatScreen() {
         style={styles.messagesArea}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
+        testID="ai-messages-scroll"
       >
         {messages.map((msg) => (
           <View
@@ -269,11 +272,13 @@ export default function AIChatScreen() {
           placeholderTextColor={Colors.textMuted}
           multiline
           maxLength={500}
+          testID="ai-chat-input"
         />
         <TouchableOpacity
           style={[styles.sendBtn, (!input.trim() || isLoading) && styles.sendBtnDisabled]}
           onPress={() => sendMessage()}
           disabled={!input.trim() || isLoading}
+          testID="ai-chat-send-btn"
         >
           <LinearGradient
             colors={['#6D28D9', '#8B5CF6']}

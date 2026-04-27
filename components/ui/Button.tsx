@@ -16,6 +16,7 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  testID?: string;
 }
 
 export function Button({
@@ -25,6 +26,7 @@ export function Button({
   loading = false,
   disabled = false,
   style,
+  testID,
 }: ButtonProps) {
   if (variant === 'primary') {
     return (
@@ -33,6 +35,7 @@ export function Button({
         disabled={disabled || loading}
         activeOpacity={0.8}
         style={style}
+        testID={testID}
       >
         <LinearGradient
           colors={[Colors.primaryDark, Colors.primary]}
@@ -55,6 +58,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      testID={testID}
       style={[
         styles.button,
         variant === 'secondary' && styles.secondary,
