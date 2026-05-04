@@ -3,7 +3,10 @@ import Constants from 'expo-constants';
 import { useAppStore } from '@/stores/useAppStore';
 import { trackPushPermissionPrompt, trackPushPermissionResult } from '@/lib/analytics';
 
-const isExpoGo = Constants.appOwnership === 'expo';
+// SDK 52+: executionEnvironment === 'storeClient'; older SDKs: appOwnership === 'expo'
+const isExpoGo =
+  (Constants as any).executionEnvironment === 'storeClient' ||
+  Constants.appOwnership === 'expo';
 
 let Notifications: typeof import('expo-notifications') | null = null;
 

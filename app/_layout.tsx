@@ -199,7 +199,11 @@ export default function RootLayout() {
         const { Platform } = await import('react-native');
         if (Platform.OS === 'web') return;
         const Constants = (await import('expo-constants')).default;
-        if (Constants.appOwnership === 'expo') return;
+        // SDK 52+: executionEnvironment === 'storeClient'; older: appOwnership === 'expo'
+        const isExpoGo =
+          (Constants as any).executionEnvironment === 'storeClient' ||
+          Constants.appOwnership === 'expo';
+        if (isExpoGo) return;
         const Notifications = await import('expo-notifications');
         notifSub = Notifications.addNotificationResponseReceivedListener((response) => {
           const data = response.notification.request.content.data as any;
