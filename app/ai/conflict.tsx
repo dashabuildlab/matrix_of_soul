@@ -95,10 +95,7 @@ export default function ConflictScreen() {
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ConflictResult | null>(null);
-  const tokens = useAppStore((s) => s.tokens);
   const isPremium = useAppStore((s) => s.isPremium);
-  const useToken = useAppStore((s) => s.useToken);
-  const addTokens = useAppStore((s) => s.addTokens);
 
   const [data, setData] = useState<ConflictData>({
     peopleCount: '2',
@@ -114,24 +111,17 @@ export default function ConflictScreen() {
       Alert.alert('Опишіть ситуацію', 'Введіть короткий опис ситуації');
       return;
     }
-    if (!isPremium && tokens < 2) {
-      Alert.alert('Потрібно 2 кристали', 'Поповніть баланс або оформіть Premium', [
-        { text: 'Скасувати', style: 'cancel' },
-        { text: 'Преміум', onPress: () => router.push('/paywall') },
-      ]);
+    if (!isPremium) {
+      router.push('/paywall');
       return;
     }
 
     try {
       setLoading(true);
-      if (!isPremium) { useToken(); useToken(); }
-
       const analysisResult = await analyzeConflictWithAI(data);
       setResult(analysisResult);
       setStep('result');
     } catch (err) {
-      // Refund tokens since AI call failed
-      if (!isPremium) addTokens(2);
       const msg = err instanceof Error ? err.message : 'Невідома помилка';
       Alert.alert('Помилка аналізу', msg);
     } finally {

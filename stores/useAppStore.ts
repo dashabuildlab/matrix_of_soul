@@ -114,10 +114,35 @@ interface AppState {
   activeSessionId: string | null;
   setActiveSession: (id: string | null) => void;
 
-  // Tokens / premium currency
+  // Tokens / premium currency (кристали)
   tokens: number;
   addTokens: (n: number) => void;
   useToken: () => boolean;
+  spendCrystals: (amount: number) => boolean; // spend exact amount; returns false if not enough
+
+  // Destiny matrix (premium — one per user, generated from onboarding birth date)
+  destinyMatrix: SavedMatrix | null;
+  setDestinyMatrix: (m: SavedMatrix | null) => void;
+  destinyMatrixAiSummary: string | null;
+  setDestinyMatrixAiSummary: (text: string) => void;
+
+  // Push notifications & daily gift
+  pushEnabled: boolean;
+  setPushEnabled: (val: boolean) => void;
+  dailyCardEnabled: boolean;
+  setDailyCardEnabled: (val: boolean) => void;
+  firstOpenDate: string | null;
+  setFirstOpenDate: (date: string) => void;
+  lastNotificationScheduledDate: string | null;
+  setLastNotificationScheduledDate: (date: string) => void;
+  lastGiftClaimedDate: string | null;
+  consecutiveMissedGifts: number;
+  incrementMissedGifts: () => void;
+  pendingGift: { type: 'tarot-spread'; date: string } | null;
+  setPendingGift: (gift: { type: 'tarot-spread'; date: string } | null) => void;
+  canClaimGift: () => boolean;
+  claimDailyGift: (amount: number) => void;
+  clearExpiredGifts: () => void;
 
   // Subscription
   isPremium: boolean;
@@ -147,6 +172,8 @@ interface AppState {
   checkAchievements: () => Achievement[];
   meditationCount: number;
   incrementMeditationCount: () => void;
+  likedMeditations: string[];
+  toggleLikedMeditation: (id: string) => void;
   notifications: NotificationItem[];
   addNotification: (notif: NotificationItem) => void;
   markNotificationRead: (id: string) => void;
@@ -154,6 +181,10 @@ interface AppState {
   // AI consent
   aiConsentGiven: boolean;
   setAiConsentGiven: () => void;
+
+  // Daily matrix AI cache (keyed by date string "YYYY-MM-DD")
+  dailyMatrixCache: Record<string, string>;
+  setDailyMatrixCache: (date: string, text: string) => void;
 
   // Background PDF analysis generation
   pendingAnalysis: PendingAnalysis | null;
@@ -252,6 +283,54 @@ export const useAppStore = create<AppState>()(
     if (state.tokens <= 0) return false;
     set((s) => ({ tokens: s.tokens - 1 }));
     return true;
+  },
+  spendCrystals: (amount) => {
+    const state = get();
+    if (state.isPremium) return true;
+    if (state.tokens < amount) return false;
+    set((s) => ({ tokens: s.tokens - amount }));
+    return true;
+  },
+
+  // Destiny matrix
+  destinyMatrix: null,
+  setDestinyMatrix: (m) => set({ destinyMatrix: m }),
+  destinyMatrixAiSummary: null,
+  setDestinyMatrixAiSummary: (text) => set({ destinyMatrixAiSummary: text }),
+
+  // Push notifications & daily gift
+  pushEnabled: true,
+  setPushEnabled: (val) => set({ pushEnabled: val }),
+  dailyCardEnabled: false,
+  setDailyCardEnabled: (val) => set({ dailyCardEnabled: val }),
+  firstOpenDate: null,
+  setFirstOpenDate: (date) => set({ firstOpenDate: date }),
+  lastNotificationScheduledDate: null,
+  setLastNotificationScheduledDate: (date) => set({ lastNotificationScheduledDate: date }),
+  lastGiftClaimedDate: null,
+  consecutiveMissedGifts: 0,
+  incrementMissedGifts: () => set((s) => ({ consecutiveMissedGifts: s.consecutiveMissedGifts + 1 })),
+  pendingGift: null,
+  setPendingGift: (gift) => set({ pendingGift: gift }),
+  canClaimGift: () => {
+    const state = get();
+    const today = new Date().toISOString().split('T')[0];
+    return !!state.pendingGift && state.pendingGift.date === today;
+  },
+  claimDailyGift: (amount) => {
+    set((s) => ({
+      tokens: s.tokens + amount,
+      lastGiftClaimedDate: new Date().toISOString().split('T')[0],
+      pendingGift: null,
+      consecutiveMissedGifts: 0,
+    }));
+  },
+  clearExpiredGifts: () => {
+    const state = get();
+    const today = new Date().toISOString().split('T')[0];
+    if (state.pendingGift && state.pendingGift.date < today) {
+      set({ pendingGift: null });
+    }
   },
 
   isPremium: false,
@@ -358,6 +437,14 @@ export const useAppStore = create<AppState>()(
   incrementMeditationCount: () =>
     set((state) => ({ meditationCount: state.meditationCount + 1 })),
 
+  likedMeditations: [],
+  toggleLikedMeditation: (id) =>
+    set((state) => ({
+      likedMeditations: state.likedMeditations.includes(id)
+        ? state.likedMeditations.filter((x) => x !== id)
+        : [...state.likedMeditations, id],
+    })),
+
   notifications: [],
   addNotification: (notif) =>
     set((state) => ({ notifications: [notif, ...state.notifications].slice(0, 50) })),
@@ -371,6 +458,13 @@ export const useAppStore = create<AppState>()(
   // AI consent
   aiConsentGiven: false,
   setAiConsentGiven: () => set({ aiConsentGiven: true }),
+
+  // Daily matrix AI cache
+  dailyMatrixCache: {},
+  setDailyMatrixCache: (date, text) =>
+    set((state) => ({
+      dailyMatrixCache: { ...state.dailyMatrixCache, [date]: text },
+    })),
 
   // Background PDF analysis
   pendingAnalysis: null,
@@ -457,6 +551,16 @@ export const useAppStore = create<AppState>()(
         notifications: state.notifications,
         pendingAnalysis: state.pendingAnalysis,
         aiConsentGiven: state.aiConsentGiven,
+        dailyMatrixCache: state.dailyMatrixCache,
+        destinyMatrix: state.destinyMatrix,
+        destinyMatrixAiSummary: state.destinyMatrixAiSummary,
+        pushEnabled: state.pushEnabled,
+        dailyCardEnabled: state.dailyCardEnabled,
+        firstOpenDate: state.firstOpenDate,
+        lastNotificationScheduledDate: state.lastNotificationScheduledDate,
+        lastGiftClaimedDate: state.lastGiftClaimedDate,
+        consecutiveMissedGifts: state.consecutiveMissedGifts,
+        pendingGift: state.pendingGift,
       }),
     }
   )

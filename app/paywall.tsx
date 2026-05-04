@@ -1,15 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Dimensions, Alert, ActivityIndicator,
+  TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { useAppStore } from '../stores/useAppStore';
 import { getOfferings, purchasePackage, restorePurchases } from '../lib/purchases';
+
+// RevenueCat не працює в Expo Go — показуємо fallback-плани
+const IS_EXPO_GO = Constants.appOwnership === 'expo';
+
+interface FallbackPlan {
+  id: string;
+  label: string;
+  priceString: string;
+  perMonth: string | null;
+  savings: string | null;
+  isBest: boolean;
+  plan: 'yearly' | 'monthly' | 'weekly';
+}
+
+const FALLBACK_PLANS: FallbackPlan[] = [
+  { id: 'annual',  label: 'Рік',     priceString: '$49.99', perMonth: '$4.17/міс',  savings: 'Економія 58%', isBest: true,  plan: 'yearly'  },
+  { id: 'monthly', label: 'Місяць',  priceString: '$9.99',  perMonth: null,          savings: null,           isBest: false, plan: 'monthly' },
+  { id: 'weekly',  label: 'Тиждень', priceString: '$3.99',  perMonth: '$17.29/міс', savings: null,           isBest: false, plan: 'weekly'  },
+];
 
 const { width } = Dimensions.get('window');
 
@@ -24,11 +44,7 @@ const FEATURES = [
   { icon: 'heart-outline' as const, label: 'Детальний аналіз сумісності' },
 ];
 
-const TESTIMONIALS = [
-  { name: 'Оксана', avatar: '🌸', text: 'Зрозуміла себе набагато краще! AI аналіз матриці — просто вау!', stars: 5 },
-  { name: 'Дмитро', avatar: '⭐', text: 'Конфлікт на роботі вирішився після аналізу. Рекомендую всім!', stars: 5 },
-  { name: 'Марія', avatar: '💫', text: 'Медитації допомагають зранку налаштуватись. Дякую за додаток!', stars: 5 },
-];
+const PRIVACY_URL = 'https://matrixofdestinytarot.com/uk/privacy/';
 
 function packageLabel(pkg: PurchasesPackage): string {
   switch (pkg.packageType) {
@@ -67,36 +83,59 @@ export default function PaywallScreen() {
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [selected, setSelected] = useState<PurchasesPackage | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedFallback, setSelectedFallback] = useState<FallbackPlan>(FALLBACK_PLANS[0]);
+  const [loading, setLoading] = useState(!IS_EXPO_GO);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    getOfferings()
-      .then((offering) => {
-        if (offering?.availablePackages.length) {
-          const pkgs = offering.availablePackages;
-          setPackages(pkgs);
-          const annual = pkgs.find((p) => p.packageType === PACKAGE_TYPE.ANNUAL);
-          setSelected(annual ?? pkgs[0]);
-        }
-      })
-      .catch(() => Alert.alert('Помилка', 'Не вдалось завантажити плани підписки.'))
-      .finally(() => setLoading(false));
-  }, []);
+  // Використовуємо fallback-плани в Expo Go або при помилці завантаження
+  const useFallback = IS_EXPO_GO || (loadError && packages.length === 0);
+
+  const loadPlans = async () => {
+    if (IS_EXPO_GO) return; // RevenueCat не працює в Expo Go
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const offering = await getOfferings();
+      if (offering?.availablePackages?.length) {
+        const pkgs = offering.availablePackages;
+        setPackages(pkgs);
+        const annual = pkgs.find((p) => p.packageType === PACKAGE_TYPE.ANNUAL);
+        setSelected(annual ?? pkgs[0]);
+      } else {
+        setLoadError(true);
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadPlans(); }, []);
 
   const handleSubscribe = async () => {
-    if (!selected) return;
     setPurchasing(true);
     try {
+      // Fallback-режим (Expo Go або помилка завантаження) — активуємо premium напряму
+      if (useFallback) {
+        setPremium(true, selectedFallback.plan);
+        Alert.alert(
+          'Ласкаво просимо до Premium!',
+          'Ваш преміум доступ активовано. Насолоджуйтесь всіма можливостями Matrix of Soul!',
+          [{ text: 'Почати', onPress: () => router.back() }]
+        );
+        return;
+      }
+      if (!selected) return;
       const { isActive } = await purchasePackage(selected);
       if (isActive) {
         const plan = selected.packageType === PACKAGE_TYPE.ANNUAL ? 'yearly'
           : selected.packageType === PACKAGE_TYPE.MONTHLY ? 'monthly' : 'weekly';
         setPremium(true, plan);
-        addTokens(100);
         Alert.alert(
-          '🎉 Ласкаво просимо до Premium!',
+          'Ласкаво просимо до Premium!',
           'Ваш преміум доступ активовано. Насолоджуйтесь всіма можливостями Matrix of Soul!',
           [{ text: 'Почати', onPress: () => router.back() }]
         );
@@ -140,16 +179,14 @@ export default function PaywallScreen() {
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       >
-        <Text style={styles.heroEmoji}>💎</Text>
+        <View style={styles.heroIconWrap}>
+          <Ionicons name="diamond" size={44} color={Colors.accent} />
+        </View>
         <Text style={styles.heroTitle}>Matrix of Soul</Text>
         <Text style={styles.heroBadge}>PREMIUM</Text>
         <Text style={styles.heroSubtitle}>
           Розкрийте повний потенціал вашої матриці долі та карт Таро
         </Text>
-        <View style={styles.socialProof}>
-          <Text style={styles.socialProofText}>⭐⭐⭐⭐⭐</Text>
-          <Text style={styles.socialProofCount}>12,400+ задоволених користувачів</Text>
-        </View>
       </LinearGradient>
 
       {/* Features */}
@@ -177,10 +214,48 @@ export default function PaywallScreen() {
             <ActivityIndicator color={Colors.primary} size="large" />
             <Text style={styles.loadingText}>Завантаження планів...</Text>
           </View>
-        ) : packages.length === 0 ? (
-          <View style={styles.loadingBox}>
-            <Text style={styles.loadingText}>Плани недоступні. Перевірте підключення.</Text>
-          </View>
+        ) : useFallback ? (
+          // Fallback-плани (Expo Go / нема з'єднання зі стором)
+          FALLBACK_PLANS.map((plan) => {
+            const isSelected = selectedFallback.id === plan.id;
+            return (
+              <TouchableOpacity
+                key={plan.id}
+                style={[styles.planCard, isSelected && styles.planCardSelected]}
+                onPress={() => setSelectedFallback(plan)}
+                activeOpacity={0.8}
+                testID={`paywall-plan-${plan.id}`}
+              >
+                <LinearGradient
+                  colors={isSelected
+                    ? (plan.isBest ? ['#1E1B4B', '#4338CA'] : ['#1E1B4B', '#312E81'])
+                    : ['#141428', '#1C1C3A']}
+                  style={styles.planGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  {plan.isBest && (
+                    <View style={[styles.planBadge, { backgroundColor: Colors.accent }]}>
+                      <Text style={styles.planBadgeText}>Найкраща ціна</Text>
+                    </View>
+                  )}
+                  <View style={styles.planContent}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.planLabel}>{plan.label}</Text>
+                      {plan.savings && <Text style={styles.planSavings}>{plan.savings}</Text>}
+                    </View>
+                    <View style={styles.planPriceGroup}>
+                      <Text style={styles.planPrice}>{plan.priceString}</Text>
+                      {plan.perMonth && <Text style={styles.planPricePerMonth}>{plan.perMonth}</Text>}
+                    </View>
+                    <View style={[styles.planRadio, isSelected && styles.planRadioSelected]}>
+                      {isSelected && <View style={styles.planRadioInner} />}
+                    </View>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })
         ) : (
           packages.map((pkg) => {
             const isSelected = selected?.identifier === pkg.identifier;
@@ -206,7 +281,7 @@ export default function PaywallScreen() {
                 >
                   {isAnnual && (
                     <View style={[styles.planBadge, { backgroundColor: Colors.accent }]}>
-                      <Text style={styles.planBadgeText}>🔥 Найкраща ціна</Text>
+                      <Text style={styles.planBadgeText}>Найкраща ціна</Text>
                     </View>
                   )}
                   <View style={styles.planContent}>
@@ -229,23 +304,6 @@ export default function PaywallScreen() {
         )}
       </View>
 
-      {/* Testimonials */}
-      <View style={{ paddingLeft: Spacing.lg, marginBottom: Spacing.lg }}>
-        <Text style={styles.sectionTitle}>Відгуки користувачів</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: 'row', gap: Spacing.md, paddingRight: Spacing.lg }}>
-            {TESTIMONIALS.map((t, i) => (
-              <View key={i} style={styles.testimonialCard}>
-                <Text style={{ fontSize: 28 }}>{t.avatar}</Text>
-                <Text style={styles.testimonialName}>{t.name}</Text>
-                <Text>{'⭐'.repeat(t.stars)}</Text>
-                <Text style={styles.testimonialText}>{t.text}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-
       {/* CTA */}
       <View style={styles.section}>
         <TouchableOpacity
@@ -265,7 +323,7 @@ export default function PaywallScreen() {
               ? <ActivityIndicator color="#fff" />
               : <>
                   <Text style={styles.subscribeBtnText}>
-                    {selected ? `Спробувати ${packageLabel(selected)}` : 'Оберіть план'}
+                    {selected ? `Оформити ${packageLabel(selected)}` : 'Оберіть план'}
                   </Text>
                   <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
                 </>
@@ -281,8 +339,11 @@ export default function PaywallScreen() {
         </TouchableOpacity>
 
         <Text style={styles.legalText}>
-          Підписка автоматично поновлюється. Скасувати можна в налаштуваннях App Store/Google Play.
-          Оформляючи підписку, ви погоджуєтесь з Умовами використання та Політикою конфіденційності.
+          Підписка автоматично поновлюється. Скасувати можна в налаштуваннях App Store/Google Play.{'\n'}
+          Оформляючи підписку, ви погоджуєтесь з умовами використання та{' '}
+          <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+            Політикою конфіденційності
+          </Text>.
         </Text>
       </View>
     </ScrollView>
@@ -304,7 +365,12 @@ const styles = StyleSheet.create({
     padding: Spacing.xl, paddingTop: 64,
     alignItems: 'center', gap: Spacing.sm,
   },
-  heroEmoji: { fontSize: 56 },
+  heroIconWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: Colors.accent,
+  },
   heroTitle: { color: Colors.text, fontSize: FontSize.xxl, fontWeight: '800', letterSpacing: 1 },
   heroBadge: {
     color: Colors.accent, fontSize: FontSize.sm, fontWeight: '900', letterSpacing: 4,
@@ -315,10 +381,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)', fontSize: FontSize.md, textAlign: 'center',
     lineHeight: 22, marginTop: Spacing.sm, paddingHorizontal: Spacing.md,
   },
-  socialProof: { alignItems: 'center', marginTop: Spacing.md, gap: 4 },
-  socialProofText: { fontSize: FontSize.md },
-  socialProofCount: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.sm },
-
   section: { padding: Spacing.lg },
   sectionTitle: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '700', marginBottom: Spacing.md },
 
@@ -331,7 +393,16 @@ const styles = StyleSheet.create({
   featureLabel: { color: Colors.text, fontSize: FontSize.md, flex: 1 },
 
   loadingBox: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.md },
-  loadingText: { color: Colors.textMuted, fontSize: FontSize.sm },
+  loadingText: { color: Colors.textMuted, fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
+  retryBtn: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    marginTop: Spacing.xs,
+  },
+  retryText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '600' },
 
   planCard: {
     borderRadius: BorderRadius.xl, overflow: 'hidden',
@@ -359,13 +430,6 @@ const styles = StyleSheet.create({
   planRadioSelected: { borderColor: Colors.primary },
   planRadioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary },
 
-  testimonialCard: {
-    width: 200, backgroundColor: Colors.bgCard, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, gap: 6, borderWidth: 1, borderColor: Colors.border,
-  },
-  testimonialName: { color: Colors.text, fontSize: FontSize.md, fontWeight: '700' },
-  testimonialText: { color: Colors.textSecondary, fontSize: FontSize.sm, lineHeight: 18 },
-
   subscribeBtn: { borderRadius: BorderRadius.xl, overflow: 'hidden' },
   subscribeBtnGradient: {
     padding: Spacing.lg, alignItems: 'center',
@@ -379,5 +443,9 @@ const styles = StyleSheet.create({
   legalText: {
     color: Colors.textMuted, fontSize: FontSize.xs,
     lineHeight: 16, textAlign: 'center', paddingBottom: Spacing.md,
+  },
+  legalLink: {
+    color: Colors.primaryLight, fontSize: FontSize.xs,
+    textDecorationLine: 'underline',
   },
 });

@@ -6,12 +6,14 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
@@ -35,28 +37,45 @@ ${matrixSummary ? `\nМатриця долі:\n${matrixSummary}` : ''}
 - Якщо є дані матриці — спирайтесь на них у відповіді
 - Відповідайте мовою питання (українська або англійська)
 - Будьте конкретними та практичними, не лише поетичними
+- НЕ використовуйте markdown розмітку (**жирний**, *курсив*) — пишіть звичайним текстом
 - Якщо питання не стосується езотерики — делікатно поверніться до теми`;
 }
 
+// Renders text with **bold** markdown parsed into bold Text spans
+function FormattedText({ text, style }: { text: string; style?: object }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <Text style={style}>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return (
+            <Text key={i} style={{ fontWeight: '700' }}>
+              {part.slice(2, -2)}
+            </Text>
+          );
+        }
+        return <Text key={i}>{part}</Text>;
+      })}
+    </Text>
+  );
+}
+
 const QUICK_QUESTIONS = [
-  '💜 Що говорять карти про мої стосунки?',
-  '💼 Яка моя енергія для кар\'єри сьогодні?',
-  '🔮 Зроби прогноз на цей місяць',
-  '✅ Карта відповідає на моє питання',
-  '🌙 Яке моє призначення?',
-  '⚡ Що заважає мені рухатись вперед?',
+  'Що говорять карти про мої стосунки?',
+  'Яка моя енергія для кар\'єри сьогодні?',
+  'Зроби прогноз на цей місяць',
+  'Яке моє призначення?',
+  'Що заважає мені рухатись вперед?',
 ];
 
 export default function AIChatScreen() {
   const router = useRouter();
+  const { sessionId: paramSessionId } = useLocalSearchParams<{ sessionId?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const tokens = useAppStore((s) => s.tokens);
   const isPremium = useAppStore((s) => s.isPremium);
-  const useToken = useAppStore((s) => s.useToken);
-  const addTokens = useAppStore((s) => s.addTokens);
   const addChatSession = useAppStore((s) => s.addChatSession);
   const addMessageToSession = useAppStore((s) => s.addMessageToSession);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
@@ -64,16 +83,27 @@ export default function AIChatScreen() {
   const setActiveSession = useAppStore((s) => s.setActiveSession);
   const userName = useAppStore((s) => s.userName);
   const userBirthDate = useAppStore((s) => s.userBirthDate);
-  const savedMatrices = useAppStore((s) => s.savedMatrices);
+  const destinyMatrix = useAppStore((s) => s.destinyMatrix);
+
+  // Premium gate
+  useEffect(() => {
+    if (!isPremium) {
+      router.replace('/paywall');
+    }
+  }, [isPremium]);
 
   const currentSession = chatSessions.find((s) => s.id === activeSessionId);
 
-  const matrixSummary = savedMatrices[0]
-    ? `Особистість: ${savedMatrices[0].data.personality}, Душа: ${savedMatrices[0].data.soul}, Доля: ${savedMatrices[0].data.destiny}, Призначення: ${savedMatrices[0].data.purpose}`
+  const matrixSummary = destinyMatrix
+    ? `Особистість: ${destinyMatrix.data.personality}, Душа: ${destinyMatrix.data.soul}, Доля: ${destinyMatrix.data.destiny}, Призначення: ${destinyMatrix.data.purpose}`
     : '';
 
   useEffect(() => {
-    if (!activeSessionId) {
+    if (paramSessionId) {
+      // Continue existing session from history
+      setActiveSession(paramSessionId);
+    } else {
+      // Always start a new session on fresh entry
       const newSession: AIChatSession = {
         id: Date.now().toString(),
         title: 'AI Консультація',
@@ -82,7 +112,7 @@ export default function AIChatScreen() {
           {
             id: '0',
             role: 'assistant',
-            content: `🌟 Вітаю! Я ваш особистий AI Езотерик.\n\nЯ можу допомогти вам:\n• Розтлумачити карти Таро\n• Проаналізувати вашу Матрицю Долі\n• Відповісти на питання про майбутнє\n• Дати поради щодо стосунків та кар'єри\n\nПоставте своє питання або оберіть тему нижче ✨`,
+            content: `Вітаю! Я ваш особистий AI Езотерик.\n\nЯ можу допомогти вам:\n• Розтлумачити карти Таро\n• Проаналізувати вашу Матрицю Долі\n• Відповісти на питання про майбутнє\n• Дати поради щодо стосунків та кар'єри\n\nПоставте своє питання або оберіть тему нижче`,
             createdAt: new Date().toISOString(),
           },
         ],
@@ -98,24 +128,13 @@ export default function AIChatScreen() {
 
   const sendMessage = useCallback(async (text?: string) => {
     const msg = text ?? input.trim();
-    if (!msg) return;
-
-    if (!isPremium && tokens <= 0) {
-      Alert.alert(
-        'Кристали закінчились',
-        'Поповніть баланс або оформіть Premium підписку для безлімітних чатів.',
-        [
-          { text: 'Скасувати', style: 'cancel' },
-          { text: 'Преміум', onPress: () => router.push('/paywall') },
-        ]
-      );
-      return;
-    }
+    if (!msg || !isPremium) return;
 
     const sessionId = activeSessionId;
     if (!sessionId) return;
 
     if (!text) setInput('');
+    Keyboard.dismiss();
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -125,7 +144,6 @@ export default function AIChatScreen() {
     };
     addMessageToSession(sessionId, userMsg);
     setIsLoading(true);
-    useToken();
 
     try {
       const history: ClaudeMessage[] = (currentSession?.messages ?? [])
@@ -139,53 +157,54 @@ export default function AIChatScreen() {
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiText || '✨ Всесвіт мовчить. Спробуйте перефразувати питання.',
+        content: aiText || 'Всесвіт мовчить. Спробуйте перефразувати питання.',
         createdAt: new Date().toISOString(),
       };
       addMessageToSession(sessionId, aiMsg);
     } catch (err) {
-      // Refund the token since the AI call failed
-      if (!isPremium) addTokens(1);
       const errMsg = err instanceof Error ? err.message : 'Невідома помилка';
       Alert.alert('Помилка AI', errMsg, [{ text: 'OK' }]);
     } finally {
       setIsLoading(false);
     }
-  }, [activeSessionId, input, isPremium, tokens, currentSession, userName, userBirthDate, matrixSummary]);
+  }, [activeSessionId, input, isPremium, currentSession, userName, userBirthDate, matrixSummary]);
 
   const messages = currentSession?.messages ?? [];
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
+  if (!isPremium) return null;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={88}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <LinearGradient
         colors={['#1E1B4B', '#312E81']}
         style={styles.header}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>AI Езотерик</Text>
           <View style={styles.onlineDot} />
         </View>
-        {!isPremium && (
-          <TouchableOpacity
-            onPress={() => router.push('/paywall')}
-            style={styles.tokenBadge}
-            testID="ai-token-badge"
-          >
-            <Ionicons name="diamond" size={12} color={Colors.accent} />
-            <Text style={styles.tokenCount}>{tokens}</Text>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={styles.newChatBtn}
-          onPress={() => setActiveSession(null)}
+          onPress={() => {
+            setActiveSession(null);
+            router.replace('/ai/chat');
+          }}
           testID="ai-new-chat-btn"
         >
           <Ionicons name="add-circle-outline" size={22} color={Colors.text} />
@@ -193,74 +212,76 @@ export default function AIChatScreen() {
       </LinearGradient>
 
       {/* Messages */}
-      <ScrollView
-        ref={scrollRef}
-        style={styles.messagesArea}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
-        testID="ai-messages-scroll"
-      >
-        {messages.map((msg) => (
-          <View
-            key={msg.id}
-            style={[
-              styles.messageBubble,
-              msg.role === 'user' ? styles.userBubble : styles.aiBubble,
-            ]}
-          >
-            {msg.role === 'assistant' && (
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.messagesArea}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          testID="ai-messages-scroll"
+        >
+          {messages.map((msg) => (
+            <View
+              key={msg.id}
+              style={[
+                styles.messageBubble,
+                msg.role === 'user' ? styles.userBubble : styles.aiBubble,
+              ]}
+            >
+              {msg.role === 'assistant' && (
+                <View style={styles.aiAvatar}>
+                  <Ionicons name="sparkles" size={14} color={Colors.primaryLight} />
+                </View>
+              )}
+              <View
+                style={[
+                  styles.bubbleContent,
+                  msg.role === 'user' ? styles.userContent : styles.aiContent,
+                ]}
+              >
+                <FormattedText
+                  text={msg.content}
+                  style={[
+                    styles.bubbleText,
+                    msg.role === 'user' ? styles.userText : styles.aiText,
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
+
+          {isLoading && (
+            <View style={[styles.messageBubble, styles.aiBubble]}>
               <View style={styles.aiAvatar}>
                 <Ionicons name="sparkles" size={14} color={Colors.primaryLight} />
               </View>
-            )}
-            <View
-              style={[
-                styles.bubbleContent,
-                msg.role === 'user' ? styles.userContent : styles.aiContent,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.bubbleText,
-                  msg.role === 'user' ? styles.userText : styles.aiText,
-                ]}
-              >
-                {msg.content}
-              </Text>
+              <View style={[styles.bubbleContent, styles.aiContent, styles.loadingBubble]}>
+                <ActivityIndicator size="small" color={Colors.primaryLight} />
+                <Text style={styles.loadingText}>Езотерик думає...</Text>
+              </View>
             </View>
-          </View>
-        ))}
+          )}
 
-        {isLoading && (
-          <View style={[styles.messageBubble, styles.aiBubble]}>
-            <View style={styles.aiAvatar}>
-              <Ionicons name="sparkles" size={14} color={Colors.primaryLight} />
+          {/* Quick questions (only on empty chat) */}
+          {messages.length <= 1 && (
+            <View style={styles.quickQuestionsContainer}>
+              <Text style={styles.quickQuestionsTitle}>Популярні запити:</Text>
+              {QUICK_QUESTIONS.map((q) => (
+                <TouchableOpacity
+                  key={q}
+                  style={styles.quickQuestion}
+                  onPress={() => sendMessage(q)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickQuestionText}>{q}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+                </TouchableOpacity>
+              ))}
             </View>
-            <View style={[styles.bubbleContent, styles.aiContent, styles.loadingBubble]}>
-              <ActivityIndicator size="small" color={Colors.primaryLight} />
-              <Text style={styles.loadingText}>Езотерик думає...</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Quick questions (only on empty chat) */}
-        {messages.length <= 1 && (
-          <View style={styles.quickQuestionsContainer}>
-            <Text style={styles.quickQuestionsTitle}>Популярні запити:</Text>
-            {QUICK_QUESTIONS.map((q) => (
-              <TouchableOpacity
-                key={q}
-                style={styles.quickQuestion}
-                onPress={() => sendMessage(q)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.quickQuestionText}>{q}</Text>
-                <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </TouchableWithoutFeedback>
 
       {/* Input */}
       <View style={styles.inputArea}>
@@ -320,20 +341,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#10B981',
-  },
-  tokenBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.accentMuted,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  tokenCount: {
-    color: Colors.accent,
-    fontSize: FontSize.sm,
-    fontWeight: '700',
   },
   newChatBtn: { padding: Spacing.xs },
 

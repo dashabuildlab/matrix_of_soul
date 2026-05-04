@@ -251,7 +251,7 @@ export async function schedulePremiumEngagementNotification(locale: string) {
     : 0;
   const isTarotDay = daysSinceFirst % 2 === 0;
 
-  const personalMatrix = state.personalMatrix;
+  const personalMatrix = state.destinyMatrix?.data;
   const personalityNum = personalMatrix?.personality;
 
   const content = isTarotDay

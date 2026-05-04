@@ -7,6 +7,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Colors } from '../constants/theme';
 import { initializePurchases } from '../lib/purchases';
 import { supabase } from '../lib/supabase';
+import { initializeNotifications } from '../lib/notifications';
 import { useAppStore, Achievement } from '../stores/useAppStore';
 import type { Session } from '@supabase/supabase-js';
 
@@ -121,11 +122,18 @@ export default function RootLayout() {
   const checkAchievements = useAppStore((s) => s.checkAchievements);
   const addNotification = useAppStore((s) => s.addNotification);
   const storeAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const storeOnboardingCompleted = useAppStore((s) => s.onboardingCompleted);
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     const init = async () => {
+      // Clear expired push gifts from previous days
+      useAppStore.getState().clearExpiredGifts();
+
+      // Initialize push notifications (schedule daily gift / engagement push)
+      initializeNotifications('uk').catch(() => {});
+
       try {
         const val = await SecureStore.getItemAsync('onboarding_done');
         setOnboardingDone(val === 'true');
@@ -136,9 +144,10 @@ export default function RootLayout() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
+        // Always initialize Purchases — use userId when available, anonymous otherwise
+        initializePurchases(session?.user.id ?? null);
         if (session) {
           useAppStore.setState({ isAuthenticated: true, userId: session.user.id });
-          initializePurchases(session.user.id);
 
           const result = checkAndUpdateStreak();
           if (result.isNewDay) {
@@ -183,9 +192,29 @@ export default function RootLayout() {
       if (session) initializePurchases(session.user.id);
     });
 
+    // Handle push notification taps
+    let notifSub: { remove: () => void } | null = null;
+    (async () => {
+      try {
+        const { Platform } = await import('react-native');
+        if (Platform.OS === 'web') return;
+        const Constants = (await import('expo-constants')).default;
+        if (Constants.appOwnership === 'expo') return;
+        const Notifications = await import('expo-notifications');
+        notifSub = Notifications.addNotificationResponseReceivedListener((response) => {
+          const data = response.notification.request.content.data as any;
+          if (data?.type === 'daily-gift') {
+            const today = new Date().toISOString().split('T')[0];
+            useAppStore.getState().setPendingGift({ type: 'tarot-spread', date: today });
+          }
+        });
+      } catch { /* Expo Go or web — ignore */ }
+    })();
+
     return () => {
       timers.forEach(clearTimeout);
       subscription.unsubscribe();
+      notifSub?.remove();
     };
   }, []);
 
@@ -206,10 +235,12 @@ export default function RootLayout() {
         headerTitleStyle: { fontWeight: '600' },
         contentStyle: { backgroundColor: Colors.bg },
         headerShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
       }}>
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} redirect={onboardingDone} />
+        <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} redirect={onboardingDone && storeOnboardingCompleted} />
         <Stack.Screen name="auth/login" options={{ headerShown: false }} redirect={!!session || storeAuthenticated} />
-        <Stack.Screen name="auth/register" options={{ title: '', headerBackTitle: 'Назад' }} />
+        <Stack.Screen name="auth/register" options={{ title: '' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} redirect={!session && !storeAuthenticated} />
 
         {/* Matrix */}
@@ -226,8 +257,6 @@ export default function RootLayout() {
         <Stack.Screen name="tarot/yesno" options={{ title: 'Так чи Ні', presentation: 'modal' }} />
         <Stack.Screen name="tarot/person" options={{ title: 'Розклад на Людину', presentation: 'modal' }} />
         <Stack.Screen name="tarot/period" options={{ title: 'Прогноз Таро', presentation: 'modal' }} />
-        <Stack.Screen name="tarot/astro" options={{ title: 'Астропрогноз' }} />
-
         {/* AI */}
         <Stack.Screen name="ai/disclosure" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="ai/chat" options={{ headerShown: false }} />
@@ -235,6 +264,9 @@ export default function RootLayout() {
 
         {/* Learn */}
         <Stack.Screen name="learn/tarot" options={{ title: 'Вивчення Таро' }} />
+        <Stack.Screen name="learn/signs" options={{ title: 'Знаки Зодіаку' }} />
+        <Stack.Screen name="learn/planets" options={{ title: 'Планети' }} />
+        <Stack.Screen name="learn/chakras" options={{ title: 'Чакри' }} />
 
         {/* Profile */}
         <Stack.Screen name="profile/achievements" options={{ title: 'Досягнення та нагороди' }} />
@@ -244,6 +276,7 @@ export default function RootLayout() {
         {/* Utility */}
         <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="meditation" options={{ title: 'Медитації' }} />
+        <Stack.Screen name="meditation/player" options={{ headerShown: false }} />
         <Stack.Screen name="share" options={{ title: 'Поділитись', presentation: 'modal' }} />
 
       </Stack>
