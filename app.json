@@ -56,7 +56,6 @@
       "bundler": "metro"
     },
     "plugins": [
-      "./plugins/withFirestoreStub",
       "expo-router",
       "expo-dev-client",
       "expo-font",
