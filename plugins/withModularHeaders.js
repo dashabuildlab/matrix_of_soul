@@ -15,20 +15,9 @@ module.exports = function withModularHeaders(config) {
           /(platform :ios.*\n)/,
           `$1use_modular_headers!\n`
         );
+        fs.writeFileSync(podfile, contents);
       }
 
-      // $RNFirebaseAsStaticFramework — forces Firebase to link as pre-compiled
-      // static binary xcframeworks. Without this, CocoaPods clones the entire
-      // firebase-ios-sdk monorepo (~2-3 GB incl. Firestore C++ source) and EAS
-      // build machines run out of disk space.
-      if (!contents.includes('RNFirebaseAsStaticFramework')) {
-        contents = contents.replace(
-          /(platform :ios.*\n)/,
-          `$1$RNFirebaseAsStaticFramework = true\n`
-        );
-      }
-
-      fs.writeFileSync(podfile, contents);
       return cfg;
     },
   ]);
