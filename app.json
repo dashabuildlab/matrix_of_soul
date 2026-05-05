@@ -2,7 +2,7 @@
   "expo": {
     "name": "Matrix of Soul",
     "slug": "matrix-of-soul",
-    "version": "1.0.31",
+    "version": "1.0.32",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -48,7 +48,8 @@
         "backgroundColor": "#0A0A1A"
       },
       "package": "com.matrixofsoul.app",
-      "versionCode": 31
+      "versionCode": 32,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -56,11 +57,19 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       "expo-font",
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu"
+        }
+      ],
       "expo-audio",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-video"
     ]
   }
 }
