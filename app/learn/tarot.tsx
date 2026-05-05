@@ -5,17 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
-import { TAROT_CARDS } from '../../constants/tarotData';
+import { TAROT_CARDS } from '../../lib/staticData';
 import { useAppStore } from '../../stores/useAppStore';
-
-const { width } = Dimensions.get('window');
 
 type GameMode = 'browse' | 'quiz_keyword' | 'quiz_name' | 'quiz_yesno' | 'result';
 
@@ -87,8 +83,6 @@ export default function TarotLearnScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [quizType, setQuizType] = useState<GameMode>('quiz_keyword');
-  const [browsedCard, setBrowsedCard] = useState<(typeof TAROT_CARDS)[0] | null>(null);
-
   const addTokens = useAppStore((s) => s.addTokens);
 
   const startQuiz = (type: GameMode) => {
@@ -171,87 +165,6 @@ export default function TarotLearnScreen() {
           ))}
         </View>
 
-        {/* Card browser */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Всі Аркани (22)</Text>
-          <View style={styles.cardsGrid}>
-            {TAROT_CARDS.map((card) => (
-              <TouchableOpacity
-                key={card.id}
-                style={styles.cardMini}
-                onPress={() => setBrowsedCard(card)}
-              >
-                <LinearGradient
-                  colors={['#1E1B4B', '#4338CA']}
-                  style={styles.cardMiniGradient}
-                >
-                  <Text style={styles.cardMiniNum}>{card.id}</Text>
-                  <Text style={styles.cardMiniName} numberOfLines={2}>{card.nameUk}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Card detail modal */}
-        {browsedCard && (
-          <View style={styles.cardDetailOverlay}>
-            <View style={styles.cardDetailContainer}>
-              <TouchableOpacity style={styles.closeBtn} onPress={() => setBrowsedCard(null)}>
-                <Ionicons name="close" size={24} color={Colors.textMuted} />
-              </TouchableOpacity>
-              <ScrollView>
-                <LinearGradient colors={['#1E1B4B', '#4338CA']} style={styles.cardDetailHero}>
-                  <Text style={styles.cardDetailNum}>{browsedCard.id}</Text>
-                  <Text style={styles.cardDetailTitle}>{browsedCard.nameUk}</Text>
-                  <Text style={styles.cardDetailTitleEn}>{browsedCard.name}</Text>
-                  <View style={styles.cardDetailMeta}>
-                    <Text style={styles.cardMetaTag}>{browsedCard.element}</Text>
-                    <Text style={styles.cardMetaTag}>{browsedCard.planet}</Text>
-                    <Text style={[styles.cardMetaTag, { color: browsedCard.yesNo === 'yes' ? Colors.success : browsedCard.yesNo === 'no' ? Colors.error : Colors.accent }]}>
-                      {browsedCard.yesNo === 'yes' ? 'Так ✓' : browsedCard.yesNo === 'no' ? 'Ні ✗' : 'Можливо ~'}
-                    </Text>
-                  </View>
-                </LinearGradient>
-
-                <View style={styles.cardDetailBody}>
-                  <View style={styles.keywords}>
-                    {browsedCard.keywords.map((kw) => (
-                      <View key={kw} style={styles.kwBadge}>
-                        <Text style={styles.kwText}>{kw}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={styles.meaningSection}>
-                    <Text style={styles.meaningLabel}>↑ Пряме положення</Text>
-                    <Text style={styles.meaningText}>{browsedCard.upright}</Text>
-                  </View>
-
-                  <View style={styles.meaningSection}>
-                    <Text style={[styles.meaningLabel, { color: Colors.error }]}>↓ Перевернуте</Text>
-                    <Text style={styles.meaningText}>{browsedCard.reversed}</Text>
-                  </View>
-
-                  <View style={styles.meaningSection}>
-                    <Text style={[styles.meaningLabel, { color: Colors.success }]}>💡 Порада</Text>
-                    <Text style={styles.meaningText}>{browsedCard.advice}</Text>
-                  </View>
-
-                  <View style={styles.meaningSection}>
-                    <Text style={[styles.meaningLabel, { color: '#F9A8D4' }]}>❤️ Любов</Text>
-                    <Text style={styles.meaningText}>{browsedCard.loveAdvice}</Text>
-                  </View>
-
-                  <View style={styles.meaningSection}>
-                    <Text style={[styles.meaningLabel, { color: Colors.accent }]}>💼 Кар'єра</Text>
-                    <Text style={styles.meaningText}>{browsedCard.careerAdvice}</Text>
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        )}
       </ScrollView>
     );
   }
@@ -468,87 +381,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.accent,
   },
   xpText: { color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700' },
-
-  cardsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs,
-  },
-  cardMini: {
-    width: (width - Spacing.lg * 2 - Spacing.xs * 4) / 5,
-    aspectRatio: 0.7,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
-  },
-  cardMiniGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-    gap: 2,
-  },
-  cardMiniNum: { color: Colors.accent, fontSize: FontSize.md, fontWeight: '800' },
-  cardMiniName: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 9,
-    textAlign: 'center',
-    lineHeight: 12,
-  },
-
-  cardDetailOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    zIndex: 100,
-  },
-  cardDetailContainer: {
-    flex: 1,
-    marginTop: 60,
-    backgroundColor: Colors.bg,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    overflow: 'hidden',
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: Spacing.md,
-    right: Spacing.md,
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.bgCard,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardDetailHero: {
-    padding: Spacing.xl,
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingTop: Spacing.xxl,
-  },
-  cardDetailNum: { color: Colors.accent, fontSize: FontSize.title, fontWeight: '900' },
-  cardDetailTitle: { color: Colors.text, fontSize: FontSize.xxl, fontWeight: '800' },
-  cardDetailTitleEn: { color: 'rgba(255,255,255,0.5)', fontSize: FontSize.md },
-  cardDetailMeta: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
-  cardMetaTag: {
-    color: Colors.primaryLight,
-    fontSize: FontSize.sm,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-
-  cardDetailBody: { padding: Spacing.lg, gap: Spacing.md },
-  keywords: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  kwBadge: {
-    backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  kwText: { color: Colors.primaryLight, fontSize: FontSize.xs, fontWeight: '600' },
 
   meaningSection: {
     gap: 6,

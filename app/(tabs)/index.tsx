@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Animated,
   Image,
-  Modal,
   Dimensions,
   Easing,
   ActivityIndicator,
@@ -326,85 +325,10 @@ ${userName ? `Ім'я: ${userName}.` : ''}
 
   const dateStr = today.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  // ── Modal JSX ────────────────────────────────────────────────────────────────
-  const avatarModal = (
-    <Modal visible={avatarModalVisible} transparent animationType="none" onRequestClose={closeModal}>
-      <View style={modalStyles.overlay}>
-        <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={closeModal} activeOpacity={1} />
-        <Animated.View style={[modalStyles.box, { height: SCREEN_H * 0.68, opacity: modalOpacity, transform: [{ scale: modalScale }] }]}>
-          {/* Close */}
-          <TouchableOpacity style={modalStyles.closeBtn} onPress={closeModal}>
-            <Ionicons name="close" size={22} color="#FFF" />
-          </TouchableOpacity>
-
-          <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
-            {/* Avatar video */}
-            <View style={modalStyles.videoWrap}>
-              <VideoView player={startPlayer} style={[modalStyles.video, { opacity: avatarPhase === 'start' ? 1 : 0 }]} contentFit="cover" nativeControls={false} />
-              <VideoView player={loopPlayer}  style={[modalStyles.video, { opacity: avatarPhase === 'loop'  ? 1 : 0 }]} contentFit="cover" nativeControls={false} />
-              {Platform.OS === 'web' && (
-                <style dangerouslySetInnerHTML={{ __html: '#avatarVid video { width:100%!important; height:100%!important; object-fit:cover!important; }' }} />
-              )}
-              <LinearGradient colors={['#0D0B1E', 'transparent']} style={modalStyles.fadeTop} pointerEvents="none" />
-              <LinearGradient colors={['transparent', '#0D0B1E']} style={modalStyles.fadeBottom} pointerEvents="none" />
-              <LinearGradient colors={['#0D0B1E', 'transparent', 'transparent', '#0D0B1E']} locations={[0, 0.15, 0.85, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={modalStyles.fadeSides} pointerEvents="none" />
-            </View>
-
-            {/* Title */}
-            <View style={modalStyles.titleWrap}>
-              <Text style={modalStyles.title}>Матриця Дня</Text>
-            </View>
-
-            {/* Matrix diagram */}
-            <Animated.View style={[modalStyles.diagramWrap, { opacity: matrixAnim, transform: [{ scale: matrixScale }] }]}>
-              {dailyMatrix && <MatrixDiagram data={dailyMatrix} size={260} />}
-            </Animated.View>
-
-            {/* AI Summary */}
-            <View style={modalStyles.summaryWrap}>
-              {modalSummaryLoading ? (
-                <View style={modalStyles.summaryLoading}>
-                  <ActivityIndicator size="small" color={Colors.accent} />
-                  <Text style={modalStyles.summaryLoadingText}>AI аналізує матрицю...</Text>
-                </View>
-              ) : modalSummary ? (
-                <Text style={modalStyles.summaryText}>{modalSummary}</Text>
-              ) : null}
-            </View>
-
-            {/* CTA */}
-            <View style={modalStyles.ctaWrap}>
-              <TouchableOpacity
-                style={modalStyles.ctaBtn}
-                onPress={() => {
-                  closeModal();
-                  setTimeout(() => {
-                    router.push(isPremium ? '/matrix/daily' : '/paywall' as any);
-                  }, 320);
-                }}
-              >
-                <Ionicons name={isPremium ? 'grid-outline' : 'lock-closed'} size={18} color={Colors.accent} />
-                <Text style={modalStyles.ctaText}>
-                  {isPremium ? 'Відкрити повну матрицю дня' : 'Розблокувати Матрицю Долі'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-
   // ── Main render ──────────────────────────────────────────────────────────────
   return (
     <View style={styles.root}>
       <AnimatedBackground />
-      {avatarModal}
-
-      {/* Blur overlay behind modal */}
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { opacity: bgDim }]}>
-        <BlurView intensity={55} tint="dark" style={StyleSheet.absoluteFillObject} />
-      </Animated.View>
 
       {/* Content — scales back when modal opens */}
       <Animated.View style={[{ flex: 1 }, { transform: [{ scale: bgScale }] }]}>
@@ -514,6 +438,79 @@ ${userName ? `Ім'я: ${userName}.` : ''}
 
         </ScrollView>
       </Animated.View>
+
+      {/* ── Blur overlay + modal — same view tree so BlurView blurs the real content ── */}
+      <Animated.View
+        style={[StyleSheet.absoluteFillObject, { opacity: bgDim, zIndex: 99 }]}
+        pointerEvents={avatarModalVisible ? 'auto' : 'none'}
+      >
+        <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
+
+        {/* Tap outside to close */}
+        <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={closeModal} activeOpacity={1} />
+
+        {/* Modal box */}
+        <View style={modalStyles.overlay} pointerEvents="box-none">
+          <Animated.View style={[modalStyles.box, { height: SCREEN_H * 0.68, opacity: modalOpacity, transform: [{ scale: modalScale }] }]}>
+            {/* Close */}
+            <TouchableOpacity style={modalStyles.closeBtn} onPress={closeModal}>
+              <Ionicons name="close" size={22} color="#FFF" />
+            </TouchableOpacity>
+
+            <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
+              {/* Avatar video */}
+              <View style={modalStyles.videoWrap}>
+                <VideoView player={startPlayer} style={[modalStyles.video, { opacity: avatarPhase === 'start' ? 1 : 0 }]} contentFit="cover" nativeControls={false} />
+                <VideoView player={loopPlayer}  style={[modalStyles.video, { opacity: avatarPhase === 'loop'  ? 1 : 0 }]} contentFit="cover" nativeControls={false} />
+                <LinearGradient colors={['#0D0B1E', 'transparent']} style={modalStyles.fadeTop} pointerEvents="none" />
+                <LinearGradient colors={['transparent', '#0D0B1E']} style={modalStyles.fadeBottom} pointerEvents="none" />
+                <LinearGradient colors={['#0D0B1E', 'transparent', 'transparent', '#0D0B1E']} locations={[0, 0.15, 0.85, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={modalStyles.fadeSides} pointerEvents="none" />
+              </View>
+
+              {/* Title */}
+              <View style={modalStyles.titleWrap}>
+                <Text style={modalStyles.title}>Матриця Дня</Text>
+              </View>
+
+              {/* Matrix diagram */}
+              <Animated.View style={[modalStyles.diagramWrap, { opacity: matrixAnim, transform: [{ scale: matrixScale }] }]}>
+                {dailyMatrix && <MatrixDiagram data={dailyMatrix} size={260} />}
+              </Animated.View>
+
+              {/* AI Summary */}
+              <View style={modalStyles.summaryWrap}>
+                {modalSummaryLoading ? (
+                  <View style={modalStyles.summaryLoading}>
+                    <ActivityIndicator size="small" color={Colors.accent} />
+                    <Text style={modalStyles.summaryLoadingText}>AI аналізує матрицю...</Text>
+                  </View>
+                ) : modalSummary ? (
+                  <Text style={modalStyles.summaryText}>{modalSummary}</Text>
+                ) : null}
+              </View>
+
+              {/* CTA */}
+              <View style={modalStyles.ctaWrap}>
+                <TouchableOpacity
+                  style={modalStyles.ctaBtn}
+                  onPress={() => {
+                    closeModal();
+                    setTimeout(() => {
+                      router.push(isPremium ? '/matrix/daily' : '/paywall' as any);
+                    }, 320);
+                  }}
+                >
+                  <Ionicons name={isPremium ? 'grid-outline' : 'lock-closed'} size={18} color={Colors.accent} />
+                  <Text style={modalStyles.ctaText}>
+                    {isPremium ? 'Відкрити повну матрицю дня' : 'Розблокувати Матрицю Долі'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Animated.View>
+
     </View>
   );
 }
