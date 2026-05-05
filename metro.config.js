@@ -11,7 +11,19 @@ config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
 // Redirect .mjs (ESM) → .js (CJS) to avoid `import.meta` in Metro bundles.
 // Zustand v5 ESM files use import.meta.env.MODE, which Metro can't handle.
+// Also mock PushNotificationIOS: RCTPushNotificationManager native module does not exist
+// in Expo Go (SDK 53+). metroImportAll iterates ALL react-native exports and triggers
+// PushNotificationIOS initialisation which crashes. We never use PushNotificationIOS
+// directly — expo-notifications uses ExpoNotificationsEmitter instead.
+const PUSH_NOTIFICATION_IOS_PATH = path.join(__dirname, 'mocks', 'PushNotificationIOS.js');
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (
+    moduleName === 'react-native/Libraries/PushNotificationIOS/PushNotificationIOS' ||
+    moduleName.endsWith('/PushNotificationIOS/PushNotificationIOS')
+  ) {
+    return { type: 'sourceFile', filePath: PUSH_NOTIFICATION_IOS_PATH };
+  }
+
   const resolved = context.resolveRequest(context, moduleName, platform);
   if (resolved.type === 'sourceFile' && resolved.filePath.endsWith('.mjs')) {
     const fp = resolved.filePath;
