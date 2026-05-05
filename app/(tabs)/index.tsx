@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
 });
 
 const modalStyles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 },
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16, backgroundColor: 'rgba(5,3,18,0.82)' },
   box: { width: '92%', backgroundColor: '#0D0B1E', borderRadius: BorderRadius.xl, overflow: 'hidden' },
   closeBtn: { position: 'absolute', top: 12, right: 12, zIndex: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
 
@@ -584,8 +584,8 @@ const modalStyles = StyleSheet.create({
   summaryText: { color: Colors.textSecondary, fontSize: 12, lineHeight: 17, textAlign: 'center' },
 
   ctaWrap: { padding: Spacing.md, paddingTop: 0 },
-  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.accentMuted, borderRadius: BorderRadius.full, paddingVertical: 14, paddingHorizontal: Spacing.xl },
-  ctaText: { color: Colors.accent, fontSize: FontSize.md, fontWeight: '700' },
+  ctaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8, backgroundColor: Colors.accentMuted, borderRadius: BorderRadius.lg, paddingVertical: 14, paddingHorizontal: Spacing.lg },
+  ctaText: { color: Colors.accent, fontSize: FontSize.md, fontWeight: '700', flexShrink: 1, textAlign: 'center' },
 });
 
 const giftBannerStyles = StyleSheet.create({
