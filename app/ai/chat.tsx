@@ -21,7 +21,7 @@ import { useAppStore, ChatMessage, AIChatSession } from '../../stores/useAppStor
 import { askClaude, type ClaudeMessage } from '../../lib/claude';
 import { getDailyEnergy } from '../../lib/matrix-calc';
 
-function buildSystemPrompt(userName: string | null, userBirthDate: string | null, matrixSummary: string): string {
+function buildSystemPrompt(userName: string | null, userBirthDate: string | null, matrixSummary: string, dailyMatrixCtx?: string): string {
   const dailyEnergy = getDailyEnergy();
   return `Ви — AI Езотерик застосунку Matrix of Soul. Ви глибокий знавець Матриці Долі, Таро, нумерології та езотеричних практик.
 
@@ -29,7 +29,7 @@ function buildSystemPrompt(userName: string | null, userBirthDate: string | null
 - Ім'я: ${userName ?? 'невідоме'}
 - Дата народження: ${userBirthDate ?? 'невідома'}
 - Енергія поточного дня: ${dailyEnergy}
-${matrixSummary ? `\nМатриця долі:\n${matrixSummary}` : ''}
+${matrixSummary ? `\nМатриця долі:\n${matrixSummary}` : ''}${dailyMatrixCtx ? `\n${dailyMatrixCtx}` : ''}
 
 Правила:
 - Відповідайте тепло, духовно та персоналізовано
@@ -70,7 +70,7 @@ const QUICK_QUESTIONS = [
 
 export default function AIChatScreen() {
   const router = useRouter();
-  const { sessionId: paramSessionId } = useLocalSearchParams<{ sessionId?: string }>();
+  const { sessionId: paramSessionId, dailyContext } = useLocalSearchParams<{ sessionId?: string; dailyContext?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -97,6 +97,9 @@ export default function AIChatScreen() {
   const matrixSummary = destinyMatrix
     ? `Особистість: ${destinyMatrix.data.personality}, Душа: ${destinyMatrix.data.soul}, Доля: ${destinyMatrix.data.destiny}, Призначення: ${destinyMatrix.data.purpose}`
     : '';
+
+  // Daily matrix context passed from /matrix/daily "Запитати ШІ" button
+  const dailyMatrixContext = dailyContext ? `\nКонтекст сесії — ${dailyContext}` : '';
 
   useEffect(() => {
     if (paramSessionId) {
@@ -151,7 +154,7 @@ export default function AIChatScreen() {
         .slice(-10)
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-      const systemPrompt = buildSystemPrompt(userName, userBirthDate, matrixSummary);
+      const systemPrompt = buildSystemPrompt(userName, userBirthDate, matrixSummary, dailyMatrixContext);
       const aiText = await askClaude(systemPrompt, history, msg, 1500);
 
       const aiMsg: ChatMessage = {

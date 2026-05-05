@@ -19,7 +19,7 @@ import { askClaude } from '../../lib/claude';
 import { useAppStore } from '../../stores/useAppStore';
 
 const SYSTEM_PROMPT =
-  'Ти — езотеричний аналітик Матриці Долі. Напиши персональний прогноз на день (4–5 абзаців) на основі 4 енергій. Стиль: тепло, натхненно, практично. Мова — українська. Без вступів, підписів та нумерації.';
+  'Ти — езотеричний аналітик Матриці Долі. Напиши прогноз рівно 5 речень: перші 4 — персональний прогноз на день на основі 4 енергій (тепло, натхненно, практично), 5-е речення обов\'язково порівнює енергії дня з матрицею долі користувача і нативно підштовхує до її генерації (наприклад: "Щоб дізнатись як ці енергії резонують із вашою особистою Матрицею Долі — згенеруйте її прямо зараз"). Мова — українська. Без вступів, підписів, нумерації та зайвих переносів рядка.';
 
 const GRID_POSITIONS = [
   { label: 'Загальна', key: 'personality' as const },
@@ -60,7 +60,6 @@ export default function DailyMatrixScreen() {
   const [forecast, setForecast] = useState<string>(dailyMatrixCache[dateStr] ?? '');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
-  const [comparison, setComparison] = useState<string>('');
 
   const generateForecast = async () => {
     if (loading) return;
@@ -106,19 +105,6 @@ export default function DailyMatrixScreen() {
 
       setForecast(result);
       setDailyMatrixCache(dateStr, result);
-
-      // Generate short comparison teaser if personal matrix available
-      if (personalMatrix) {
-        const persEnergy = getEnergyById(personalMatrix.personality);
-        const todayEnergy = getEnergyById(matrix.personality);
-        const compResult = await askClaude(
-          'Ти — езотеричний аналітик. Відповідай ТІЛЬКИ одним коротким реченням (до 20 слів) українською мовою.',
-          [],
-          `Особистість за матрицею долі: ${personalMatrix.personality} "${persEnergy?.name}". Енергія дня: ${matrix.personality} "${todayEnergy?.name}". Напиши одне надихаюче речення про резонанс цих двох енергій сьогодні.`,
-          150,
-        );
-        setComparison(compResult);
-      }
     } catch {
       setError('Не вдалося отримати прогноз. Спробуйте пізніше.');
     } finally {
@@ -228,43 +214,55 @@ export default function DailyMatrixScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Destiny Matrix comparison teaser */}
-      {personalMatrix && comparison !== '' && (
-        <Card style={styles.comparisonCard}>
-          <View style={styles.comparisonHeader}>
-            <Ionicons name="infinite-outline" size={18} color={Colors.accent} />
-            <Text style={styles.comparisonTitle}>Порівняння з Матрицею Долі</Text>
-          </View>
-          <Text style={styles.comparisonText}>{comparison}</Text>
-        </Card>
-      )}
-
-      {/* CTA — Generate Destiny Matrix */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => router.push('/matrix/create')}
-        style={styles.destinyCtaWrap}
-      >
-        <LinearGradient
-          colors={['#4C1D95', '#7C3AED', '#8B5CF6']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.destinyCta}
+      {/* CTA — premium: AI chat; non-premium: generate destiny matrix */}
+      {isPremium ? (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => {
+            const ctx = `Матриця дня: Загальна=${matrix.personality}, Емоції=${matrix.soul}, Дії=${matrix.destiny}, Духовне=${matrix.spiritual}. Енергія дня: ${dailyEnergy} "${energy?.name}".`;
+            router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
+          }}
+          style={styles.destinyCtaWrap}
         >
-          <View style={styles.destinyCtaIcon}>
-            <Ionicons name="grid-outline" size={28} color={Colors.accent} />
-          </View>
-          <View style={styles.destinyCtaInfo}>
-            <Text style={styles.destinyCtaTitle}>Згенерувати Матрицю Долі</Text>
-            <Text style={styles.destinyCtaSub}>
-              {personalMatrix
-                ? 'Відкрий повний аналіз своєї матриці — 22 енергії, таланти та призначення'
-                : 'Введи дату народження та відкрий свою унікальну матрицю долі'}
-            </Text>
-          </View>
-          <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.8)" />
-        </LinearGradient>
-      </TouchableOpacity>
+          <LinearGradient
+            colors={['#1E1B4B', '#312E81', '#4338CA']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.destinyCta}
+          >
+            <View style={styles.destinyCtaIcon}>
+              <Ionicons name="chatbubble-ellipses" size={28} color="#A5B4FC" />
+            </View>
+            <View style={styles.destinyCtaInfo}>
+              <Text style={styles.destinyCtaTitle}>Запитати ШІ</Text>
+              <Text style={styles.destinyCtaSub}>Почати чат з AI Провідником про матрицю дня</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.8)" />
+          </LinearGradient>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/paywall')}
+          style={styles.destinyCtaWrap}
+        >
+          <LinearGradient
+            colors={['#4C1D95', '#7C3AED', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.destinyCta}
+          >
+            <View style={styles.destinyCtaIcon}>
+              <Ionicons name="grid-outline" size={28} color={Colors.accent} />
+            </View>
+            <View style={styles.destinyCtaInfo}>
+              <Text style={styles.destinyCtaTitle}>Згенерувати Матрицю Долі</Text>
+              <Text style={styles.destinyCtaSub}>Відкрий повний аналіз — 22 енергії, таланти та призначення</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="rgba(255,255,255,0.8)" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
     </ScrollView>
   );
@@ -422,29 +420,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
   },
 
-  // Comparison card
-  comparisonCard: {
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  comparisonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  comparisonTitle: {
-    color: Colors.accent,
-    fontSize: FontSize.md,
-    fontWeight: '700',
-  },
-  comparisonText: {
-    color: Colors.textSecondary,
-    fontSize: FontSize.md,
-    lineHeight: 22,
-    fontStyle: 'italic',
-  },
-
-  // Destiny Matrix CTA
+  // CTA
   destinyCtaWrap: {
     marginBottom: Spacing.lg,
     borderRadius: BorderRadius.xl,
