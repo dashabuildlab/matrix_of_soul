@@ -6,14 +6,18 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Image,
   Dimensions,
 } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { TAROT_CARDS, drawRandomCards } from '../../constants/tarotData';
+import { TAROT_IMAGES } from '../../constants/tarotImages';
+import { useAppStore } from '../../stores/useAppStore';
 
 const { width } = Dimensions.get('window');
 
@@ -31,16 +35,33 @@ const SPREAD_POSITIONS = [
 ];
 
 export default function PersonScreen() {
+  const router = useRouter();
+  const isPremium = useAppStore((s) => s.isPremium);
   const [step, setStep] = useState(1); // 1=info, 2=result
   const [personName, setPersonName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [relationType, setRelationType] = useState('romantic');
   const [question, setQuestion] = useState('');
+  const [questionError, setQuestionError] = useState<string | null>(null);
   const [cards, setCards] = useState<Array<{ card: (typeof TAROT_CARDS)[0]; isReversed: boolean }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeCard, setActiveCard] = useState(0);
 
+  const validateQuestion = (q: string): string | null => {
+    const t = q.trim();
+    if (t.length < 8) return 'Запитання надто коротке (мінімум 8 символів)';
+    if (t.split(/\s+/).filter(Boolean).length < 2) return 'Введіть повноцінне запитання (мінімум 2 слова)';
+    return null;
+  };
+
   const doReading = () => {
-    if (!personName.trim()) return;
+    let hasError = false;
+    if (personName.trim().length < 2) { setNameError("Введіть ім'я людини"); hasError = true; }
+    else setNameError(null);
+    const qErr = validateQuestion(question);
+    if (qErr) { setQuestionError(qErr); hasError = true; }
+    else setQuestionError(null);
+    if (hasError) return;
     setIsLoading(true);
 
     setTimeout(() => {
@@ -78,8 +99,24 @@ export default function PersonScreen() {
     return (insights[pos.key]?.[isRev ? 'reversed' : 'yes']) ?? entry.card.upright;
   };
 
+  const hasReversed = cards.some((c) => c.isReversed);
+
   if (step === 1) {
     return (
+      <>
+        <Stack.Screen
+          options={{
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ marginRight: 4 }}
+              >
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            ),
+          }}
+        />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -98,15 +135,21 @@ export default function PersonScreen() {
           </Text>
         </LinearGradient>
 
-        <Card style={styles.card}>
+        <Card style={[styles.card, nameError != null && styles.cardError]}>
           <Text style={styles.fieldLabel}>Ім'я людини *</Text>
           <TextInput
             style={styles.input}
             value={personName}
-            onChangeText={setPersonName}
+            onChangeText={(v) => { setPersonName(v); if (v.trim().length >= 2) setNameError(null); }}
             placeholder="Введіть ім'я"
             placeholderTextColor={Colors.textMuted}
           />
+          {nameError && (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle-outline" size={13} color={Colors.error} />
+              <Text style={styles.errorText}>{nameError}</Text>
+            </View>
+          )}
         </Card>
 
         <Card style={styles.card}>
@@ -131,20 +174,27 @@ export default function PersonScreen() {
           </View>
         </Card>
 
-        <Card style={styles.card}>
-          <Text style={styles.fieldLabel}>Ваше запитання (необов'язково)</Text>
+        <Card style={[styles.card, questionError != null && styles.cardError]}>
+          <Text style={styles.fieldLabel}>Ваше запитання *</Text>
           <TextInput
             style={styles.inputMultiline}
             value={question}
-            onChangeText={setQuestion}
+            onChangeText={(v) => { setQuestion(v); if (validateQuestion(v) === null) setQuestionError(null); }}
             placeholder="Що ви хочете дізнатись про цю людину?"
             placeholderTextColor={Colors.textMuted}
             multiline
+            maxLength={200}
           />
+          {questionError && (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle-outline" size={13} color={Colors.error} />
+              <Text style={styles.errorText}>{questionError}</Text>
+            </View>
+          )}
         </Card>
 
         <Card style={styles.infoCard}>
-          <Text style={styles.infoTitle}>🃏 Три карти розкажуть:</Text>
+          <Text style={styles.infoTitle}>Три карти розкажуть:</Text>
           {SPREAD_POSITIONS.map((pos, i) => (
             <View key={pos.key} style={styles.infoRow}>
               <View style={styles.infoBadge}>
@@ -159,13 +209,13 @@ export default function PersonScreen() {
         </Card>
 
         <Button
-          title={isLoading ? 'Карти розкриваються...' : '🔮 Розкрити карти'}
+          title={isLoading ? 'Карти розкриваються...' : 'Розкрити карти'}
           onPress={doReading}
           loading={isLoading}
-          disabled={!personName.trim()}
           style={styles.button}
         />
       </ScrollView>
+      </>
     );
   }
 
@@ -174,6 +224,20 @@ export default function PersonScreen() {
   const currentPos = SPREAD_POSITIONS[activeCard];
 
   return (
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Person header */}
       <Card style={styles.personHeader}>
@@ -207,10 +271,17 @@ export default function PersonScreen() {
       {currentCard && (
         <Card style={styles.cardResult}>
           <View style={styles.cardTop}>
-            <View style={styles.cardImageBox}>
-              <Text style={styles.cardIdText}>{currentCard.card.id}</Text>
-              <Ionicons name="star" size={18} color={Colors.accent} />
-            </View>
+            {TAROT_IMAGES[currentCard.card.id] ? (
+              <Image
+                source={TAROT_IMAGES[currentCard.card.id]}
+                style={[styles.cardImageBox, currentCard.isReversed && { transform: [{ rotate: '180deg' }] }]}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.cardImageBox}>
+                <Text style={styles.cardIdText}>{currentCard.card.id}</Text>
+              </View>
+            )}
             <View style={styles.cardDetails}>
               <Text style={styles.positionLabel}>{currentPos.label}</Text>
               <Text style={styles.cardTitle}>{currentCard.card.nameUk}</Text>
@@ -225,7 +296,7 @@ export default function PersonScreen() {
           </View>
 
           <View style={styles.insightBox}>
-            <Text style={styles.insightTitle}>💫 Інсайт</Text>
+            <Text style={styles.insightTitle}>Інсайт</Text>
             <Text style={styles.insightText}>{getAIInsight()}</Text>
           </View>
 
@@ -235,7 +306,7 @@ export default function PersonScreen() {
 
           {currentPos.key === 'feelings' && (
             <View style={styles.loveBox}>
-              <Text style={styles.loveTitle}>❤️ Відносини</Text>
+              <Text style={styles.loveTitle}>Відносини</Text>
               <Text style={styles.loveText}>{currentCard.card.loveAdvice}</Text>
             </View>
           )}
@@ -273,7 +344,50 @@ export default function PersonScreen() {
           />
         )}
       </View>
+
+      {/* Reversed card explanation */}
+      {hasReversed && (
+        <View style={styles.reversedInfoCard}>
+          <View style={styles.reversedInfoHeader}>
+            <Ionicons name="information-circle-outline" size={18} color={Colors.textMuted} />
+            <Text style={styles.reversedInfoTitle}>Що означає перевернута карта?</Text>
+          </View>
+          <Text style={styles.reversedInfoText}>
+            Перевернута карта — це не погано. Вона вказує, що енергія карти проявляється
+            складніше або заблокована. Це сигнал звернути увагу на цю сферу та попрацювати
+            з прихованим потенціалом.
+          </Text>
+        </View>
+      )}
+
+      {/* Ask AI */}
+      <TouchableOpacity
+        style={styles.aiBtn}
+        onPress={() => {
+          const relLabel = RELATIONSHIP_TYPES.find((t) => t.id === relationType)?.label ?? '';
+          const ctx = `Розклад на людину "${personName}" (${relLabel}), питання: "${question}". Карти: ${cards.map((c, i) => `${SPREAD_POSITIONS[i].label} — ${c.card.nameUk}${c.isReversed ? ' (перевернута)' : ''}`).join('; ')}.`;
+          if (isPremium) {
+            router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
+          } else {
+            router.push('/paywall');
+          }
+        }}
+        activeOpacity={0.85}
+      >
+        <LinearGradient colors={['#1E1B4B', '#4338CA']} style={styles.aiBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <Ionicons name={isPremium ? 'sparkles' : 'lock-closed'} size={18} color="#A5B4FC" />
+          <Text style={styles.aiBtnText}>Запитати AI Єзотерика</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* Disclaimer */}
+      <View style={styles.disclaimerBox}>
+        <Ionicons name="information-circle-outline" size={14} color={Colors.textMuted} />
+        <Text style={styles.disclaimerText}>Лише для розваг. Не замінює професійних порад.</Text>
+      </View>
+
     </ScrollView>
+    </>
   );
 }
 
@@ -299,7 +413,13 @@ const styles = StyleSheet.create({
   },
 
   card: { margin: Spacing.lg, marginBottom: Spacing.sm },
+  cardError: { borderColor: Colors.error, borderWidth: 1.5 },
   button: { margin: Spacing.lg },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  errorText: { color: Colors.error, fontSize: FontSize.xs },
+  aiBtn: { marginHorizontal: Spacing.lg, borderRadius: BorderRadius.xl, overflow: 'hidden', marginBottom: Spacing.sm },
+  aiBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
+  aiBtnText: { color: '#A5B4FC', fontSize: FontSize.md, fontWeight: '700' },
 
   fieldLabel: {
     color: Colors.textMuted,
@@ -452,13 +572,8 @@ const styles = StyleSheet.create({
   cardImageBox: {
     width: 70,
     height: 100,
-    backgroundColor: Colors.primaryMuted,
     borderRadius: BorderRadius.md,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
+    overflow: 'hidden',
   },
   cardIdText: {
     color: Colors.accent,
@@ -567,5 +682,46 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+
+  reversedInfoCard: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.bgCardLight,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.sm,
+  },
+  reversedInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  reversedInfoTitle: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+  },
+  reversedInfoText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+  },
+
+  disclaimerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  disclaimerText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    lineHeight: 16,
+    flex: 1,
   },
 });
