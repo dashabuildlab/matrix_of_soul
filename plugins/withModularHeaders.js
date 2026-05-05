@@ -4,18 +4,14 @@ const path = require('path');
 
 // WHY THIS EXISTS:
 //
-// @react-native-google-signin declares ExpoAdapterGoogleSignIn with
-// `s.static_framework = true`. CocoaPods propagates this static requirement
-// to transitive deps (Firebase Swift pods). Firebase Swift pods depend on
-// GoogleUtilities which can't be static in dynamic mode → pod install fails:
+// @react-native-google-signin/ExpoAdapterGoogleSignIn has static_framework=true.
+// This requires ALL Firebase Swift pods to also be static. The only correct
+// way to satisfy this is to use static linkage for all pods uniformly.
 //
-//   "The following Swift pods cannot yet be integrated as static libraries:
-//    FirebaseCoreInternal, FirebaseAuth, FirebaseCrashlytics, FirebaseSessions"
+// Official RNFB solution for Firebase + Google Sign-In co-existence:
+//   https://rnfirebase.io/#expo-installation
 //
-// Surgical fix: disable static_framework only for ExpoAdapterGoogleSignIn
-// via pre_install hook. Everything else stays as-is (dynamic by default).
-// This avoids the risk of use_frameworks! :linkage => :static breaking
-// other pods that don't support static linkage.
+// IMPORTANT: $RNFirebaseAsStaticFramework must come BEFORE use_frameworks!
 module.exports = function withModularHeaders(config) {
   return withDangerousMod(config, [
     'ios',
@@ -23,21 +19,10 @@ module.exports = function withModularHeaders(config) {
       const podfile = path.join(cfg.modRequest.platformProjectRoot, 'Podfile');
       let contents = fs.readFileSync(podfile, 'utf8');
 
-      const hook = `
-pre_install do |installer|
-  installer.pod_targets.each do |pod|
-    if pod.name == 'ExpoAdapterGoogleSignIn'
-      pod.root_spec.static_framework = false
-    end
-  end
-end
-`;
-
-      if (!contents.includes('ExpoAdapterGoogleSignIn')) {
-        // Insert before the first `target '...' do` block
+      if (!contents.includes('RNFirebaseAsStaticFramework')) {
         contents = contents.replace(
-          /(target ['"].+['"] do)/,
-          `${hook}\n$1`
+          /(platform :ios.*\n)/,
+          `$1$RNFirebaseAsStaticFramework = true\nuse_frameworks! :linkage => :static\n`
         );
         fs.writeFileSync(podfile, contents);
       }
