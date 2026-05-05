@@ -15,7 +15,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Asset } from 'expo-asset';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
@@ -444,7 +443,7 @@ ${userName ? `Ім'я: ${userName}.` : ''}
         style={[StyleSheet.absoluteFillObject, { opacity: bgDim, zIndex: 99 }]}
         pointerEvents={avatarModalVisible ? 'auto' : 'none'}
       >
-        <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(5,3,18,0.72)' }]} />
 
         {/* Tap outside to close */}
         <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={closeModal} activeOpacity={1} />
