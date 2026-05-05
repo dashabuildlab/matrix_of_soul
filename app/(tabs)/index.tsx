@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
-import { getDailyEnergy } from '../../lib/matrix-calc';
+import { getDailyEnergy, calculateMatrix } from '../../lib/matrix-calc';
 import { getEnergyById } from '../../constants/energies';
 import { TAROT_CARDS } from '../../constants/tarotData';
 import { TAROT_IMAGES } from '../../constants/tarotImages';
@@ -268,6 +268,7 @@ export default function TodayScreen() {
   const todayDate = today.toISOString().split('T')[0];
   const dailyEnergy = getDailyEnergy(today);
   const energy = getEnergyById(dailyEnergy);
+  const dailyMatrix = useMemo(() => calculateMatrix(todayDate), [todayDate]);
   const userName = useAppStore((s) => s.userName);
   const isPremium = useAppStore((s) => s.isPremium);
   const streak = useAppStore((s) => s.streak);
@@ -382,27 +383,38 @@ export default function TodayScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Energy of the Day */}
-        <LinearGradient
-          colors={['#3D1A78', '#6D28D9', '#8B5CF6']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.energyCard}
-        >
-          <View style={styles.energyHeader}>
-            <Text style={styles.energyLabel}>ЕНЕРГІЯ ДНЯ</Text>
-          </View>
-          <View style={styles.energyMain}>
-            <View style={styles.energyNumberBadge}>
-              <Text style={styles.energyNumber}>{dailyEnergy}</Text>
+        {/* ── Матриця дня ── */}
+        <TouchableOpacity activeOpacity={0.88} onPress={() => router.push('/matrix/daily' as any)}>
+          <LinearGradient
+            colors={['#3D1A78', '#6D28D9', '#8B5CF6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.matrixDayCard}
+          >
+            <Text style={styles.matrixDayLabel}>МАТРИЦЯ ДНЯ</Text>
+
+            {/* 3 числа */}
+            <View style={styles.matrixDayNums}>
+              {[
+                { val: dailyMatrix?.personality, label: 'ОСОБИСТІСТЬ' },
+                { val: dailyMatrix?.soul,        label: 'ДУША' },
+                { val: dailyMatrix?.destiny,     label: 'ДОЛЯ' },
+              ].map((item) => (
+                <View key={item.label} style={styles.matrixDayNumItem}>
+                  <Text style={styles.matrixDayNumVal}>{item.val ?? '—'}</Text>
+                  <Text style={styles.matrixDayNumLabel}>{item.label}</Text>
+                </View>
+              ))}
             </View>
-            <View style={styles.energyInfo}>
-              <Text style={styles.energyName}>{energy?.name}</Text>
-              <Text style={styles.energyKeywords}>{energy?.keywords.join(' · ')}</Text>
-              <Text style={styles.energyAdvice} numberOfLines={3}>{energy?.advice}</Text>
+
+            {/* CTA */}
+            <View style={styles.matrixDayCta}>
+              <Ionicons name="grid-outline" size={16} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.matrixDayCtaText}>Відкрити матрицю дня</Text>
+              <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
             </View>
-          </View>
           </LinearGradient>
+        </TouchableOpacity>
 
         {/* Card of the Day */}
         <DailyCardFlip />
@@ -527,60 +539,57 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  energyCard: {
+  // ── Матриця дня ──
+  matrixDayCard: {
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  energyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  energyLabel: {
+  matrixDayLabel: {
     color: '#E9D5FF',
     fontSize: FontSize.xs,
     fontWeight: '700',
     letterSpacing: 1.5,
-  },
-  energyMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
     marginBottom: Spacing.md,
   },
-  energyNumberBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
+  matrixDayNums: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: Spacing.lg,
   },
-  energyNumber: {
+  matrixDayNumItem: { alignItems: 'center', gap: 4, flex: 1 },
+  matrixDayNumVal: {
     color: '#FFFFFF',
-    fontSize: FontSize.xxl,
+    fontSize: 42,
     fontWeight: '800',
+    textShadowColor: 'rgba(245,197,66,0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
-  energyInfo: { flex: 1 },
-  energyName: {
-    color: '#FFFFFF',
-    fontSize: FontSize.xl,
+  matrixDayNumLabel: {
+    color: 'rgba(233,213,255,0.7)',
+    fontSize: 9,
     fontWeight: '700',
-    marginBottom: 2,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  energyKeywords: { color: '#E9D5FF', fontSize: FontSize.sm, marginBottom: 4 },
-  energyAdvice: { color: 'rgba(255,255,255,0.8)', fontSize: FontSize.sm, lineHeight: 18 },
-  shareEnergyBtn: {
+  matrixDayCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-end',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: BorderRadius.full,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  shareEnergyText: { color: '#E9D5FF', fontSize: FontSize.xs },
+  matrixDayCtaText: {
+    color: '#FFFFFF',
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+  },
 
   sectionTitle: {
     color: Colors.text,
