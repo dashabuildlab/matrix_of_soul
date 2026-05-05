@@ -40,8 +40,6 @@ export default function SpreadScreen() {
   }>();
   const count = parseInt(cardsCount || '3');
   const spreadName = nameParam || SPREAD_NAMES[type] || 'Розклад';
-  const isFreeSpread = type === 'three'; // "Три карти" is always free
-
   const isPremium     = useAppStore((s) => s.isPremium);
   const tokens        = useAppStore((s) => s.tokens);
   const spendCrystals = useAppStore((s) => s.spendCrystals);
@@ -63,8 +61,8 @@ export default function SpreadScreen() {
     if (err) { setQuestionError(err); return; }
     setQuestionError(null);
 
-    // Non-premium non-free spreads cost 1 crystal
-    if (!isPremium && !isFreeSpread) {
+    // Non-premium spreads cost 1 crystal
+    if (!isPremium) {
       if (tokens < 1) {
         router.push('/paywall');
         return;
