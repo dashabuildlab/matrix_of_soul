@@ -21,6 +21,7 @@ const XP_PER_LEVEL = 500;
 
 export default function ProfileScreen() {
   const isPremium = useAppStore((s) => s.isPremium);
+  const setPremium = useAppStore((s) => s.setPremium);
   const userName = useAppStore((s) => s.userName);
   const userBirthDate = useAppStore((s) => s.userBirthDate);
   const xp = useAppStore((s) => s.xp);
@@ -41,7 +42,6 @@ export default function ProfileScreen() {
     { icon: 'diamond-outline' as const, label: 'Кристали та Premium', badge: `${tokens}`, route: '/paywall' },
     { icon: 'gift-outline' as const, label: 'Реферальна програма', badge: null, route: '/matrix/referral' },
     { icon: 'headset-outline' as const, label: 'Медитації', badge: null, route: '/meditation' },
-    { icon: 'share-social-outline' as const, label: 'Поділитись', badge: null, route: '/share' },
   ];
 
   const APP_SETTINGS = [
@@ -87,25 +87,25 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statEmoji}>🔥</Text>
+            <Ionicons name="flame-outline" size={20} color="#F97316" />
             <Text style={styles.statValue}>{streak}</Text>
             <Text style={styles.statLabel}>Серія</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statEmoji}>🃏</Text>
+            <Ionicons name="layers-outline" size={20} color={Colors.primaryLight} />
             <Text style={styles.statValue}>{tarotSpreads.length}</Text>
             <Text style={styles.statLabel}>Розкладів</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statEmoji}>🌟</Text>
+            <Ionicons name="grid-outline" size={20} color={Colors.primaryLight} />
             <Text style={styles.statValue}>{savedMatrices.length}</Text>
             <Text style={styles.statLabel}>Матриць</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statEmoji}>🏆</Text>
+            <Ionicons name="trophy-outline" size={20} color={Colors.accent} />
             <Text style={styles.statValue}>{unlockedIds.length}</Text>
             <Text style={styles.statLabel}>Нагород</Text>
           </View>
@@ -115,7 +115,7 @@ export default function ProfileScreen() {
       {/* Daily affirmation */}
       {notifications.filter((n) => n.type === 'affirmation').length > 0 && (
         <Card style={styles.affirmationCard}>
-          <Text style={styles.affirmationEmoji}>✨</Text>
+          <Ionicons name="sparkles-outline" size={28} color={Colors.accent} />
           <View style={styles.affirmationContent}>
             <Text style={styles.affirmationLabel}>Афірмація дня</Text>
             <Text style={styles.affirmationText}>
@@ -134,7 +134,7 @@ export default function ProfileScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Text style={styles.premiumEmoji}>💎</Text>
+            <Ionicons name="diamond-outline" size={32} color="rgba(255,255,255,0.9)" />
             <View style={styles.premiumInfo}>
               <Text style={styles.premiumTitle}>Отримати Premium</Text>
               <Text style={styles.premiumSubtitle}>Необмежений AI · Всі медитації · Без реклами</Text>
@@ -194,6 +194,21 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       ))}
 
+      {/* DEV: premium toggle — only visible in development builds */}
+      {__DEV__ && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setPremium(!isPremium, isPremium ? undefined : 'annual')}
+        >
+          <Card style={[styles.settingItem, { borderColor: '#F97316', borderWidth: 1.5 }]}>
+            <Ionicons name="construct-outline" size={22} color="#F97316" />
+            <Text style={[styles.settingLabel, { color: '#F97316', flex: 1 }]}>
+              [DEV] {isPremium ? '🔓 Вимкнути Premium' : '🔒 Увімкнути Premium'}
+            </Text>
+          </Card>
+        </TouchableOpacity>
+      )}
+
       {/* Logout */}
       <TouchableOpacity
         activeOpacity={0.7}
@@ -217,7 +232,6 @@ export default function ProfileScreen() {
         </Card>
       </TouchableOpacity>
 
-      <Text style={styles.version}>Matrix of Soul v1.0.0 · Зроблено з ❤️ в Україні</Text>
     </ScrollView>
   );
 }
@@ -285,7 +299,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   statItem: { flex: 1, alignItems: 'center', gap: 4 },
-  statEmoji: { fontSize: 18 },
+  statIcon: { opacity: 0.9 },
   statValue: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '800' },
   statLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10 },
   statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
@@ -298,7 +312,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     borderColor: Colors.accentMuted,
   },
-  affirmationEmoji: { fontSize: 28 },
+  affirmationIcon: { opacity: 0.9 },
   affirmationContent: { flex: 1, gap: 2 },
   affirmationLabel: { color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   affirmationText: { color: Colors.text, fontSize: FontSize.sm, lineHeight: 18, fontStyle: 'italic' },

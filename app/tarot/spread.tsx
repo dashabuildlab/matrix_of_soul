@@ -6,15 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
-import { EnergyBadge } from '../../components/ui/EnergyBadge';
 import { getEnergyById } from '../../constants/energies';
 import { Button } from '../../components/ui/Button';
 import { useAppStore } from '../../stores/useAppStore';
+import { TAROT_IMAGES } from '../../constants/tarotImages';
 
 const SPREAD_NAMES: Record<string, string> = {
   three: 'Три карти',
@@ -45,16 +47,21 @@ export default function SpreadScreen() {
   const spendCrystals = useAppStore((s) => s.spendCrystals);
 
   const [question, setQuestion] = useState('');
-  const [questionError, setQuestionError] = useState(false);
+  const [questionError, setQuestionError] = useState<string | null>(null);
   const [cards, setCards] = useState<number[]>([]);
   const [revealed, setRevealed] = useState(false);
 
+  const validateQuestion = (q: string): string | null => {
+    const t = q.trim();
+    if (t.length < 8) return 'Запитання надто коротке (мінімум 8 символів)';
+    if (t.split(/\s+/).filter(Boolean).length < 2) return 'Введіть повноцінне запитання (мінімум 2 слова)';
+    return null;
+  };
+
   const drawCards = () => {
-    if (!question.trim()) {
-      setQuestionError(true);
-      return;
-    }
-    setQuestionError(false);
+    const err = validateQuestion(question);
+    if (err) { setQuestionError(err); return; }
+    setQuestionError(null);
 
     // Non-premium non-free spreads cost 1 crystal
     if (!isPremium && !isFreeSpread) {
@@ -120,11 +127,11 @@ export default function SpreadScreen() {
             </Text>
 
             {/* Question input */}
-            <View style={[styles.inputWrap, questionError && styles.inputWrapError]}>
+            <View style={[styles.inputWrap, questionError != null && styles.inputWrapError]}>
               <TextInput
                 style={styles.questionInput}
                 value={question}
-                onChangeText={(v) => { setQuestion(v); if (v.trim()) setQuestionError(false); }}
+                onChangeText={(v) => { setQuestion(v); if (validateQuestion(v) === null) setQuestionError(null); }}
                 placeholder="Ваше запитання до карт..."
                 placeholderTextColor={Colors.textMuted}
                 multiline
@@ -132,10 +139,10 @@ export default function SpreadScreen() {
               />
               <Text style={styles.charCount}>{question.length}/200</Text>
             </View>
-            {questionError && (
+            {questionError != null && (
               <View style={styles.errorRow}>
                 <Ionicons name="alert-circle-outline" size={14} color={Colors.error} />
-                <Text style={styles.errorText}>Введіть запитання перед розкладом</Text>
+                <Text style={styles.errorText}>{questionError}</Text>
               </View>
             )}
 
@@ -155,28 +162,51 @@ export default function SpreadScreen() {
 
             {cards.map((cardId, index) => {
               const energy = getEnergyById(cardId);
+              const img = TAROT_IMAGES[cardId];
               return (
                 <Card key={index} style={styles.cardItem}>
                   <Text style={styles.position}>
                     {positionLabels[index] || `Позиція ${index + 1}`}
                   </Text>
                   <View style={styles.cardRow}>
-                    <EnergyBadge energyId={cardId} size="lg" />
+                    {img ? (
+                      <Image source={img} style={styles.cardImage} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.cardImageFallback}>
+                        <Text style={styles.cardImageFallbackNum}>{cardId}</Text>
+                      </View>
+                    )}
                     <View style={styles.cardInfo}>
-                      <Text style={styles.cardName}>
-                        {cardId}. {energy?.name}
-                      </Text>
-                      <Text style={styles.cardKeywords}>
-                        {energy?.keywords.join(' · ')}
-                      </Text>
-                      <Text style={styles.cardMeaning}>
-                        {energy?.positive}
-                      </Text>
+                      <Text style={styles.cardName}>{cardId}. {energy?.name}</Text>
+                      <Text style={styles.cardKeywords}>{energy?.keywords.join(' · ')}</Text>
+                      <Text style={styles.cardMeaning}>{energy?.positive}</Text>
                     </View>
                   </View>
                 </Card>
               );
             })}
+
+            {/* Ask AI */}
+            <TouchableOpacity
+              style={styles.aiBtn}
+              onPress={() => {
+                const ctx = `Розклад "${spreadName}", питання: "${question}". Карти: ${cards.map((id, i) => {
+                  const e = getEnergyById(id);
+                  return `${positionLabels[i] || `Позиція ${i+1}`} — ${e?.name ?? id}`;
+                }).join('; ')}.`;
+                if (isPremium) {
+                  router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
+                } else {
+                  router.push('/paywall');
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <LinearGradient colors={['#1E1B4B', '#4338CA']} style={styles.aiBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <Ionicons name={isPremium ? 'sparkles' : 'lock-closed'} size={18} color="#A5B4FC" />
+                <Text style={styles.aiBtnText}>Запитати AI Єзотерика</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
             <View style={styles.disclaimerBox}>
               <Ionicons name="information-circle-outline" size={14} color={Colors.textMuted} />
@@ -186,11 +216,7 @@ export default function SpreadScreen() {
             <Button
               title="Новий Розклад"
               variant="secondary"
-              onPress={() => {
-                setCards([]);
-                setRevealed(false);
-                setQuestion('');
-              }}
+              onPress={() => { setCards([]); setRevealed(false); setQuestion(''); }}
               style={{ marginTop: Spacing.md }}
             />
           </>
@@ -208,11 +234,13 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: FontSize.xxl,
     fontWeight: '700',
+    textAlign: 'center',
   },
   subtitle: {
     color: Colors.textMuted,
     fontSize: FontSize.md,
     marginBottom: Spacing.lg,
+    textAlign: 'center',
   },
 
   startCard: {
@@ -288,6 +316,43 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
+  cardImage: {
+    width: 64,
+    height: 96,
+    borderRadius: BorderRadius.sm,
+  },
+  cardImageFallback: {
+    width: 64,
+    height: 96,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardImageFallbackNum: {
+    color: Colors.accent,
+    fontSize: FontSize.xl,
+    fontWeight: '800',
+  },
+  aiBtn: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  aiBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  aiBtnText: {
+    color: '#A5B4FC',
+    fontSize: FontSize.md,
+    fontWeight: '700',
+  },
   cardItem: { marginBottom: Spacing.md },
   position: {
     color: Colors.primaryLight,

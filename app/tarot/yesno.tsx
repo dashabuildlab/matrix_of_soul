@@ -8,35 +8,38 @@ import {
   TextInput,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { TAROT_CARDS } from '../../constants/tarotData';
+import { TAROT_IMAGES } from '../../constants/tarotImages';
+import { useAppStore } from '../../stores/useAppStore';
 
 const { width } = Dimensions.get('window');
 
 const ANSWER_CONFIG = {
   yes: {
     label: 'ТАК',
-    emoji: '✨',
+    iconName: 'checkmark-circle' as const,
     gradient: ['#064E3B', '#059669'] as [string, string],
     textColor: '#34D399',
     description: 'Карти говорять ТАК. Всесвіт підтримує ваш намір.',
   },
   no: {
     label: 'НІ',
-    emoji: '🌑',
+    iconName: 'close-circle' as const,
     gradient: ['#4C0519', '#BE123C'] as [string, string],
     textColor: '#F87171',
     description: 'Карти радять почекати або переглянути свій підхід.',
   },
   maybe: {
     label: 'МОЖЛИВО',
-    emoji: '🌙',
+    iconName: 'help-circle' as const,
     gradient: ['#1E1B4B', '#4338CA'] as [string, string],
     textColor: '#A78BFA',
     description: 'Ситуація неоднозначна. Прислухайтесь до своєї інтуїції.',
@@ -45,13 +48,24 @@ const ANSWER_CONFIG = {
 
 export default function YesNoScreen() {
   const router = useRouter();
+  const isPremium = useAppStore((s) => s.isPremium);
   const [question, setQuestion] = useState('');
+  const [questionError, setQuestionError] = useState<string | null>(null);
   const [result, setResult] = useState<{ card: (typeof TAROT_CARDS)[0]; isReversed: boolean } | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const [cardScale] = useState(new Animated.Value(0));
 
+  const validateQuestion = (q: string): string | null => {
+    const t = q.trim();
+    if (t.length < 8) return 'Запитання надто коротке (мінімум 8 символів)';
+    if (t.split(/\s+/).filter(Boolean).length < 2) return 'Введіть повноцінне запитання (мінімум 2 слова)';
+    return null;
+  };
+
   const askCards = () => {
-    if (!question.trim()) return;
+    const err = validateQuestion(question);
+    if (err) { setQuestionError(err); return; }
+    setQuestionError(null);
     setIsRevealing(true);
     setResult(null);
 
@@ -92,6 +106,20 @@ export default function YesNoScreen() {
   const answerConfig = answer ? ANSWER_CONFIG[answer] : null;
 
   return (
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -130,7 +158,7 @@ export default function YesNoScreen() {
 
           {/* Tips */}
           <Card style={styles.tipsCard}>
-            <Text style={styles.tipsTitle}>💡 Поради для кращого результату</Text>
+            <Text style={styles.tipsTitle}>Поради для кращого результату</Text>
             {[
               'Формулюйте запитання чітко та конкретно',
               'Запитуйте про одну ситуацію',
@@ -143,11 +171,17 @@ export default function YesNoScreen() {
             ))}
           </Card>
 
+          {questionError && (
+            <View style={styles.errorRow}>
+              <Ionicons name="alert-circle-outline" size={14} color={Colors.error} />
+              <Text style={styles.errorText}>{questionError}</Text>
+            </View>
+          )}
+
           <Button
-            title={isRevealing ? 'Карти відповідають...' : '🔮 Запитати карти'}
+            title={isRevealing ? 'Карти відповідають...' : 'Запитати карти'}
             onPress={askCards}
             loading={isRevealing}
-            disabled={!question.trim()}
             style={styles.askButton}
           />
 
@@ -179,7 +213,7 @@ export default function YesNoScreen() {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.answerEmoji}>{answerConfig.emoji}</Text>
+                <Ionicons name={answerConfig.iconName} size={64} color={answerConfig.textColor} />
                 <Text style={styles.answerLabel}>{answerConfig.label}</Text>
                 <Text style={styles.answerDescription}>{answerConfig.description}</Text>
               </LinearGradient>
@@ -195,10 +229,18 @@ export default function YesNoScreen() {
           {/* Card result */}
           <Card style={styles.cardResult}>
             <View style={styles.cardHeader}>
-              <View style={styles.cardImageBox}>
-                <Text style={styles.cardIdText}>{result.card.id}</Text>
-                <Ionicons name="star" size={20} color={Colors.accent} />
-              </View>
+              {TAROT_IMAGES[result.card.id] ? (
+                <Image
+                  source={TAROT_IMAGES[result.card.id]}
+                  style={[styles.cardImageBox, result.isReversed && { transform: [{ rotate: '180deg' }] }]}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.cardImageBox}>
+                  <Text style={styles.cardIdText}>{result.card.id}</Text>
+                  <Ionicons name="star" size={20} color={Colors.accent} />
+                </View>
+              )}
               <View style={styles.cardInfo}>
                 <Text style={styles.cardName}>{result.card.nameUk}</Text>
                 <Text style={styles.cardNameEn}>{result.card.name}</Text>
@@ -235,6 +277,45 @@ export default function YesNoScreen() {
             </View>
           </Card>
 
+          {/* Reversed card explanation */}
+          {result.isReversed && (
+            <View style={styles.reversedInfoCard}>
+              <View style={styles.reversedInfoHeader}>
+                <Ionicons name="information-circle-outline" size={18} color={Colors.textMuted} />
+                <Text style={styles.reversedInfoTitle}>Що означає перевернута карта?</Text>
+              </View>
+              <Text style={styles.reversedInfoText}>
+                Перевернута карта — це не погано. Вона вказує, що енергія карти проявляється
+                складніше або заблокована. Це сигнал звернути увагу на цю сферу та попрацювати
+                з прихованим потенціалом.
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.disclaimerBox}>
+            <Ionicons name="information-circle-outline" size={14} color={Colors.textMuted} />
+            <Text style={styles.disclaimerText}>Лише для розваг. Не замінює професійних порад.</Text>
+          </View>
+
+          {/* Ask AI */}
+          <TouchableOpacity
+            style={styles.aiBtn}
+            onPress={() => {
+              const ctx = `Розклад "Так чи Ні", питання: "${question}". Карта: ${result.card.nameUk}${result.isReversed ? ' (перевернута)' : ''}. Відповідь: ${answer === 'yes' ? 'ТАК' : answer === 'no' ? 'НІ' : 'МОЖЛИВО'}.`;
+              if (isPremium) {
+                router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
+              } else {
+                router.push('/paywall');
+              }
+            }}
+            activeOpacity={0.85}
+          >
+            <LinearGradient colors={['#1E1B4B', '#4338CA']} style={styles.aiBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Ionicons name={isPremium ? 'sparkles' : 'lock-closed'} size={18} color="#A5B4FC" />
+              <Text style={styles.aiBtnText}>Запитати AI Єзотерика</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
           <Button
             title="Запитати знову"
             onPress={reset}
@@ -243,6 +324,7 @@ export default function YesNoScreen() {
         </>
       )}
     </ScrollView>
+    </>
   );
 }
 
@@ -392,13 +474,38 @@ const styles = StyleSheet.create({
   cardImageBox: {
     width: 80,
     height: 120,
-    backgroundColor: Colors.primaryMuted,
     borderRadius: BorderRadius.md,
-    borderWidth: 2,
-    borderColor: Colors.primary,
+    overflow: 'hidden',
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: FontSize.xs,
+  },
+  aiBtn: {
+    marginHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: Spacing.sm,
+  },
+  aiBtnInner: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+  },
+  aiBtnText: {
+    color: '#A5B4FC',
+    fontSize: FontSize.md,
+    fontWeight: '700',
   },
   cardIdText: {
     color: Colors.accent,
@@ -492,5 +599,47 @@ const styles = StyleSheet.create({
   resetButton: {
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+
+  reversedInfoCard: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.bgCardLight,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.sm,
+  },
+  reversedInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  reversedInfoTitle: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+  },
+  reversedInfoText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+  },
+
+  answerEmoji: { fontSize: 56 },
+
+  disclaimerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  disclaimerText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    lineHeight: 16,
+    flex: 1,
   },
 });
