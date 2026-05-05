@@ -275,7 +275,7 @@ export const useAppStore = create<AppState>()(
   },
   setActiveSession: (id) => set({ activeSessionId: id }),
 
-  tokens: 10,
+  tokens: 0,
   addTokens: (n) => set((state) => ({ tokens: state.tokens + n })),
   useToken: () => {
     const state = get();
