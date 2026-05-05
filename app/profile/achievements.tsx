@@ -57,17 +57,26 @@ export default function AchievementsScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{streak}</Text>
-            <Text style={styles.statLabel}>🔥 Серія</Text>
+            <View style={styles.statLabelRow}>
+              <Ionicons name="flame" size={12} color="#F97316" />
+              <Text style={styles.statLabel}>Серія</Text>
+            </View>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{unlocked.length}</Text>
-            <Text style={styles.statLabel}>🏆 Нагороди</Text>
+            <View style={styles.statLabelRow}>
+              <Ionicons name="trophy" size={12} color="#F5C542" />
+              <Text style={styles.statLabel}>Нагороди</Text>
+            </View>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{tokens}</Text>
-            <Text style={styles.statLabel}>💎 Кристали</Text>
+            <View style={styles.statLabelRow}>
+              <Ionicons name="diamond" size={12} color="#60A5FA" />
+              <Text style={styles.statLabel}>Кристали</Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -75,7 +84,7 @@ export default function AchievementsScreen() {
       {/* Streak section */}
       <Card style={styles.streakCard}>
         <View style={styles.streakHeader}>
-          <Text style={styles.streakEmoji}>🔥</Text>
+          <Ionicons name="flame" size={40} color="#F97316" />
           <View>
             <Text style={styles.streakTitle}>Поточна серія</Text>
             <Text style={styles.streakDays}>{streak} {streak === 1 ? 'день' : streak < 5 ? 'дні' : 'днів'} поспіль</Text>
@@ -120,7 +129,9 @@ export default function AchievementsScreen() {
           <Text style={styles.sectionTitle}>Отримані нагороди ({unlocked.length})</Text>
           {unlocked.map((a) => (
             <Card key={a.id} style={styles.achievementCard}>
-              <Text style={styles.achievementIcon}>{a.icon}</Text>
+              <View style={styles.achievementIconWrap}>
+                <Ionicons name={a.icon as any} size={24} color={Colors.accent} />
+              </View>
               <View style={styles.achievementInfo}>
                 <Text style={styles.achievementTitle}>{a.title}</Text>
                 <Text style={styles.achievementDesc}>{a.description}</Text>
@@ -220,12 +231,12 @@ const styles = StyleSheet.create({
   },
   statItem: { flex: 1, alignItems: 'center', gap: 4 },
   statValue: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '800' },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   statLabel: { color: 'rgba(255,255,255,0.6)', fontSize: FontSize.xs },
   statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
 
   streakCard: { marginHorizontal: Spacing.lg, marginBottom: Spacing.md, gap: Spacing.md },
   streakHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  streakEmoji: { fontSize: 40 },
   streakTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '700' },
   streakDays: { color: Colors.accent, fontSize: FontSize.lg, fontWeight: '800' },
 
@@ -264,7 +275,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   achievementLocked: { opacity: 0.6 },
-  achievementIcon: { fontSize: 32 },
+  achievementIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.accent,
+  },
   lockedIcon: {
     width: 44,
     height: 44,

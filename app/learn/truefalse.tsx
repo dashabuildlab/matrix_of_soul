@@ -340,7 +340,6 @@ export default function TrueFalseScreen() {
   if (finished) {
     const correct = Math.round(score / XP_PER_CORRECT);
     const pct = Math.round((correct / TOTAL_QUESTIONS) * 100);
-    const emoji = pct >= 80 ? '🏆' : pct >= 50 ? '⭐' : '📚';
 
     return (
       <LinearGradient colors={['#0D0B1E', '#1C1040', '#0D0B1E']} style={styles.root}>
@@ -353,7 +352,7 @@ export default function TrueFalseScreen() {
             { label: isUk ? 'Правильних:' : 'Correct:', value: `${correct}/${TOTAL_QUESTIONS}` },
             { label: '', value: `${pct}%` },
             { label: isUk ? 'Найкраща серія:' : 'Best streak:', value: String(bestStreak) },
-            ...(isNewRecord ? [{ label: '🏆', value: isUk ? 'Новий рекорд!' : 'New record!' }] : []),
+            ...(isNewRecord ? [{ label: isUk ? 'Рекорд' : 'Record', value: isUk ? 'Новий рекорд!' : 'New record!' }] : []),
           ]}
         >
           <TouchableOpacity onPress={restart}>

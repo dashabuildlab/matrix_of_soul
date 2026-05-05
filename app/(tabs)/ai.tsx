@@ -5,282 +5,305 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
+import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 import { useAppStore } from '../../stores/useAppStore';
-
-const { width } = Dimensions.get('window');
-
-const AI_FEATURES = [
-  {
-    icon: 'chatbubble-ellipses-outline' as const,
-    title: 'AI Езотерик',
-    subtitle: 'Чат зі своєю матрицею або картами',
-    gradient: ['#1E1B4B', '#4338CA'] as [string, string],
-    route: '/ai/chat',
-    tokens: 1,
-  },
-  {
-    icon: 'people-outline' as const,
-    title: 'Аналіз Конфлікту',
-    subtitle: 'Об\'єктивна оцінка ситуацій',
-    gradient: ['#3B0764', '#7C3AED'] as [string, string],
-    route: '/ai/conflict',
-    tokens: 2,
-  },
-  {
-    icon: 'bulb-outline' as const,
-    title: 'Рекомендації',
-    subtitle: 'Поради по вашій матриці',
-    gradient: ['#064E3B', '#047857'] as [string, string],
-    route: '/ai/chat',
-    tokens: 1,
-  },
-  {
-    icon: 'heart-half-outline' as const,
-    title: 'Любовний прогноз',
-    subtitle: 'Аналіз стосунків через Таро + AI',
-    gradient: ['#831843', '#BE185D'] as [string, string],
-    route: '/ai/chat',
-    tokens: 1,
-  },
-];
-
-const ENCYCLOPEDIA_SECTIONS = [
-  { icon: 'layers-outline' as const, title: '22 Аркани Таро', count: 22, route: '/tarot/history' },
-  { icon: 'sparkles-outline' as const, title: '22 Енергії', count: 22, route: '/learn' },
-  { icon: 'planet-outline' as const, title: 'Планети та знаки', count: 10, route: '/tarot/astro' },
-  { icon: 'flower-outline' as const, title: 'Чакри', count: 7, route: '/matrix/daily' },
-];
 
 export default function AIScreen() {
   const router = useRouter();
-  const tokens = useAppStore((s) => s.tokens);
   const isPremium = useAppStore((s) => s.isPremium);
   const chatSessions = useAppStore((s) => s.chatSessions);
   const aiConsentGiven = useAppStore((s) => s.aiConsentGiven);
 
-  const navigateToAI = (route: string) => {
+  const navigateToChat = () => {
+    if (!isPremium) {
+      router.push('/paywall');
+      return;
+    }
     if (!aiConsentGiven) {
-      router.push((`/ai/disclosure?next=${encodeURIComponent(route)}`) as any);
+      router.push(('/ai/disclosure?next=%2Fai%2Fchat') as any);
     } else {
-      router.push(route as any);
+      router.push('/ai/chat' as any);
+    }
+  };
+
+  const navigateToConflict = () => {
+    if (!isPremium) {
+      router.push('/paywall');
+      return;
+    }
+    if (!aiConsentGiven) {
+      router.push(('/ai/disclosure?next=%2Fai%2Fconflict') as any);
+    } else {
+      router.push('/ai/conflict' as any);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Token Balance */}
-      <Card style={styles.balanceCard}>
-        <View style={styles.balanceRow}>
-          <View style={styles.balanceLeft}>
-            <Ionicons name="diamond-outline" size={24} color={Colors.accent} />
-            <View>
-              <Text style={styles.balanceLabel}>Кристали</Text>
-              <Text style={styles.balanceValue}>
-                {isPremium ? '∞' : tokens}
-              </Text>
-            </View>
-          </View>
-          {!isPremium && (
-            <TouchableOpacity
-              style={styles.buyTokensBtn}
-              onPress={() => router.push('/paywall')}
-            >
-              <Text style={styles.buyTokensText}>+ Поповнити</Text>
-            </TouchableOpacity>
-          )}
-          {isPremium && (
-            <View style={styles.premiumBadge}>
-              <Ionicons name="star" size={12} color={Colors.accent} />
-              <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-            </View>
-          )}
+    <View style={styles.root}>
+      <AnimatedBackground />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>AI Магія</Text>
+          <Text style={styles.pageSubtitle}>Ваш особистий езотерик та провідник</Text>
         </View>
-        {!isPremium && (
-          <Text style={styles.balanceHint}>
-            1 кристал = 1 AI запит · Преміум — безлімітно
-          </Text>
-        )}
-      </Card>
 
-      {/* AI Features Grid */}
-      <Text style={styles.sectionTitle}>AI Функції</Text>
-      <View style={styles.featuresGrid}>
-        {AI_FEATURES.map((item) => (
-          <TouchableOpacity
-            key={item.title}
-            style={styles.featureItem}
-            activeOpacity={0.7}
-            onPress={() => navigateToAI(item.route)}
-          >
+        {/* Premium banner for non-premium users */}
+        {!isPremium && (
+          <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/paywall')}>
             <LinearGradient
-              colors={item.gradient}
-              style={styles.featureGradient}
+              colors={['#3B0764', '#7C3AED']}
+              style={styles.premiumBanner}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Ionicons name={item.icon} size={28} color="#FFFFFF" />
-              <Text style={styles.featureTitle}>{item.title}</Text>
-              <Text style={styles.featureSubtitle}>{item.subtitle}</Text>
-              {!isPremium && (
-                <View style={styles.tokenCost}>
-                  <Ionicons name="diamond" size={10} color={Colors.accent} />
-                  <Text style={styles.tokenCostText}>{item.tokens}</Text>
-                </View>
-              )}
+              <Ionicons name="lock-closed" size={20} color={Colors.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.premiumBannerTitle}>AI Магія — Premium</Text>
+                <Text style={styles.premiumBannerSub}>Оформіть підписку для доступу до всіх AI функцій</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
             </LinearGradient>
           </TouchableOpacity>
-        ))}
-      </View>
+        )}
 
-      {/* Recent Chats */}
-      {chatSessions.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Нещодавні чати</Text>
-          {chatSessions.slice(0, 3).map((session) => (
-            <TouchableOpacity
-              key={session.id}
-              activeOpacity={0.7}
-              onPress={() => {
-                useAppStore.getState().setActiveSession(session.id);
-                navigateToAI('/ai/chat');
-              }}
-            >
-              <Card style={styles.chatItem}>
-                <View style={styles.chatItemIcon}>
-                  <Ionicons
-                    name={session.context === 'tarot' ? 'layers-outline' : 'grid-outline'}
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </View>
-                <View style={styles.chatItemInfo}>
-                  <Text style={styles.chatItemTitle} numberOfLines={1}>
-                    {session.title}
-                  </Text>
-                  <Text style={styles.chatItemLast} numberOfLines={1}>
-                    {session.messages.at(-1)?.content ?? 'Розпочніть розмову...'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-              </Card>
-            </TouchableOpacity>
-          ))}
-        </>
-      )}
-
-      {/* Encyclopedia */}
-      <Text style={styles.sectionTitle}>Довідник</Text>
-      <View style={styles.encyclopediaGrid}>
-        {ENCYCLOPEDIA_SECTIONS.map((item) => (
-          <TouchableOpacity
-            key={item.title}
-            style={styles.encyclopediaItem}
-            activeOpacity={0.7}
-            onPress={() => router.push(item.route as any)}
-          >
-            <Card style={styles.encyclopediaCard}>
-              <Ionicons name={item.icon} size={24} color={Colors.primary} />
-              <Text style={styles.encyclopediaTitle}>{item.title}</Text>
-              <Text style={styles.encyclopediaCount}>{item.count} записів</Text>
-            </Card>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Conflict Resolution CTA */}
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => navigateToAI('/ai/conflict')}
-      >
-        <LinearGradient
-          colors={['#2D1B69', '#4C1D95', '#6D28D9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.conflictBanner}
-        >
-          <Ionicons name="shield-checkmark-outline" size={36} color="#DDD6FE" />
-          <View style={styles.conflictInfo}>
-            <Text style={styles.conflictTitle}>Вирішення Конфлікту</Text>
-            <Text style={styles.conflictText}>
-              Отримайте об\'єктивну оцінку ситуації та конкретні рекомендації
-            </Text>
+        {/* Premium badge */}
+        {isPremium && (
+          <View style={styles.premiumActive}>
+            <Ionicons name="star" size={14} color={Colors.accent} />
+            <Text style={styles.premiumActiveText}>Premium активний · Безлімітний AI</Text>
           </View>
-          <Ionicons name="arrow-forward-circle" size={28} color="#A78BFA" />
-        </LinearGradient>
-      </TouchableOpacity>
-    </ScrollView>
+        )}
+
+        {/* Main hero: AI Єзотерик */}
+        <TouchableOpacity
+          style={styles.heroBtn}
+          activeOpacity={0.85}
+          onPress={navigateToChat}
+        >
+          <LinearGradient
+            colors={['#1E1B4B', '#4338CA', '#6D28D9']}
+            style={styles.heroBtnGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.heroBtnTop}>
+              <View style={styles.heroBtnIconWrap}>
+                <Ionicons name="sparkles" size={32} color="#A5B4FC" />
+              </View>
+              {!isPremium && (
+                <View style={styles.lockBadge}>
+                  <Ionicons name="lock-closed" size={12} color={Colors.accent} />
+                </View>
+              )}
+            </View>
+            <Text style={styles.heroBtnTitle}>AI Єзотерик</Text>
+            <Text style={styles.heroBtnSubtitle}>
+              Чат з вашою матрицею, картами Таро та езотеричними практиками
+            </Text>
+            <View style={styles.heroBtnAction}>
+              <Text style={styles.heroBtnActionText}>Почати розмову</Text>
+              <Ionicons name="arrow-forward" size={16} color="#A5B4FC" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Conflict analysis feature */}
+        <Text style={styles.sectionTitle}>Інструменти</Text>
+        <TouchableOpacity
+          style={styles.conflictCard}
+          activeOpacity={0.8}
+          onPress={navigateToConflict}
+        >
+          <LinearGradient
+            colors={['#3B0764', '#7C3AED']}
+            style={styles.conflictGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.conflictLeft}>
+              <View style={styles.conflictIcon}>
+                <Ionicons name="people-outline" size={26} color="#C4B5FD" />
+              </View>
+              <View style={styles.conflictInfo}>
+                <Text style={styles.conflictTitle}>Аналіз конфлікту</Text>
+                <Text style={styles.conflictSubtitle}>
+                  Об'єктивна оцінка ситуацій та рекомендації для вирішення
+                </Text>
+              </View>
+            </View>
+            <View style={styles.conflictRight}>
+              {!isPremium ? (
+                <Ionicons name="lock-closed" size={18} color={Colors.accent} />
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
+              )}
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Recent Chats — only for premium */}
+        {isPremium && chatSessions.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Останні чати</Text>
+            {chatSessions.slice(0, 5).map((session) => (
+              <TouchableOpacity
+                key={session.id}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (aiConsentGiven) {
+                    router.push((`/ai/chat?sessionId=${session.id}`) as any);
+                  } else {
+                    router.push((`/ai/disclosure?next=${encodeURIComponent(`/ai/chat?sessionId=${session.id}`)}`) as any);
+                  }
+                }}
+              >
+                <Card style={styles.chatItem}>
+                  <View style={styles.chatItemIcon}>
+                    <Ionicons
+                      name={session.context === 'tarot' ? 'layers-outline' : 'chatbubble-ellipses-outline'}
+                      size={20}
+                      color={Colors.primary}
+                    />
+                  </View>
+                  <View style={styles.chatItemInfo}>
+                    <Text style={styles.chatItemTitle} numberOfLines={1}>
+                      {session.title}
+                    </Text>
+                    <Text style={styles.chatItemLast} numberOfLines={1}>
+                      {session.messages.at(-1)?.content ?? 'Розпочніть розмову...'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
+  root: { flex: 1, backgroundColor: Colors.bg },
+  container: { flex: 1 },
   content: { padding: Spacing.lg, paddingBottom: 120 },
 
-  balanceCard: {
-    marginBottom: Spacing.md,
-    borderColor: Colors.accentMuted,
+  pageHeader: {
+    paddingTop: 56,
+    paddingBottom: Spacing.lg,
   },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  pageTitle: {
+    color: Colors.text,
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
   },
-  balanceLeft: {
+  pageSubtitle: {
+    color: Colors.textMuted,
+    fontSize: FontSize.md,
+    marginTop: 4,
+  },
+
+  premiumBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
-  balanceLabel: {
-    color: Colors.textMuted,
+  premiumBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: FontSize.md,
+    fontWeight: '700',
+  },
+  premiumBannerSub: {
+    color: 'rgba(255,255,255,0.65)',
     fontSize: FontSize.xs,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    marginTop: 2,
   },
-  balanceValue: {
-    color: Colors.accent,
-    fontSize: FontSize.xl,
-    fontWeight: '800',
-  },
-  buyTokensBtn: {
+
+  premiumActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
     backgroundColor: Colors.accentMuted,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
+    alignSelf: 'flex-start',
+    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.accent,
   },
-  buyTokensText: {
+  premiumActiveText: {
     color: Colors.accent,
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '600',
   },
-  premiumBadge: {
+
+  heroBtn: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: Spacing.lg,
+  },
+  heroBtnGradient: {
+    padding: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  heroBtnTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  heroBtnIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(165,180,252,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockBadge: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroBtnTitle: {
+    color: '#FFFFFF',
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
+    marginTop: Spacing.sm,
+  },
+  heroBtnSubtitle: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: FontSize.md,
+    lineHeight: 22,
+  },
+  heroBtnAction: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.accentMuted,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  premiumBadgeText: {
-    color: Colors.accent,
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  balanceHint: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
+    gap: Spacing.xs,
     marginTop: Spacing.sm,
+  },
+  heroBtnActionText: {
+    color: '#A5B4FC',
+    fontSize: FontSize.md,
+    fontWeight: '700',
   },
 
   sectionTitle: {
@@ -288,53 +311,48 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: '700',
     marginBottom: Spacing.md,
-    marginTop: Spacing.md,
-  },
-
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  featureItem: {
-    width: (width - Spacing.lg * 2 - Spacing.sm) / 2,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-  },
-  featureGradient: {
-    padding: Spacing.md,
-    minHeight: 130,
-    gap: Spacing.xs,
-    position: 'relative',
-  },
-  featureTitle: {
-    color: '#FFFFFF',
-    fontSize: FontSize.md,
-    fontWeight: '700',
     marginTop: Spacing.sm,
   },
-  featureSubtitle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: FontSize.xs,
-    lineHeight: 16,
-    flex: 1,
+
+  conflictCard: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: Spacing.lg,
   },
-  tokenCost: {
+  conflictGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-    marginTop: 4,
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
   },
-  tokenCostText: {
-    color: Colors.accent,
-    fontSize: FontSize.xs,
-    fontWeight: '600',
+  conflictLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
+  },
+  conflictIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(196,181,253,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  conflictInfo: { flex: 1 },
+  conflictTitle: {
+    color: '#FFFFFF',
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+  },
+  conflictSubtitle: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: FontSize.sm,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  conflictRight: {
+    paddingLeft: Spacing.sm,
   },
 
   chatItem: {
@@ -361,52 +379,5 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: FontSize.sm,
     marginTop: 1,
-  },
-
-  encyclopediaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  encyclopediaItem: {
-    width: (width - Spacing.lg * 2 - Spacing.sm) / 2,
-  },
-  encyclopediaCard: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  encyclopediaTitle: {
-    color: Colors.text,
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  encyclopediaCount: {
-    color: Colors.textMuted,
-    fontSize: FontSize.xs,
-  },
-
-  conflictBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  conflictInfo: { flex: 1 },
-  conflictTitle: {
-    color: '#FFFFFF',
-    fontSize: FontSize.lg,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  conflictText: {
-    color: '#DDD6FE',
-    fontSize: FontSize.sm,
-    lineHeight: 18,
   },
 });

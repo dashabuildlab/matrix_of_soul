@@ -17,6 +17,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAppStore } from '../../stores/useAppStore';
 import { askClaude } from '../../lib/claude';
+import { MarkdownText } from '../../components/ui/MarkdownText';
 
 type Step = 1 | 2 | 3 | 4 | 'result';
 
@@ -24,16 +25,27 @@ const PEOPLE_OPTIONS = ['2', '3', '4', '5+'];
 const ROLE_OPTIONS = ['Партнер', 'Друг', 'Колега', 'Родич', 'Незнайомець', 'Начальник'];
 const SITUATION_TYPES = ['Конфлікт', 'Непорозуміння', 'Вибір', 'Образа', 'Зрада', 'Ревнощі', 'Маніпуляція', 'Інше'];
 const RESPONSE_FORMATS = [
-  { label: '🤝 М\'яка порада', desc: 'Делікатна підтримуюча відповідь' },
-  { label: '⚡ Жорстка правда', desc: 'Чесна об\'єктивна оцінка' },
-  { label: '📋 Покроковий план', desc: 'Конкретні кроки для вирішення' },
-  { label: '⚖️ Аналіз сторін', desc: 'Хто правий, хто ні' },
+  { label: 'М\'яка порада', desc: 'Делікатна підтримуюча відповідь', icon: 'heart-outline' as const },
+  { label: 'Жорстка правда', desc: 'Чесна об\'єктивна оцінка', icon: 'flash-outline' as const },
+  { label: 'Покроковий план', desc: 'Конкретні кроки для вирішення', icon: 'list-outline' as const },
+  { label: 'Аналіз сторін', desc: 'Хто правий, хто ні', icon: 'scale-outline' as const },
 ];
+
+/** Compute number of other participants from peopleCount string */
+function otherCount(pc: string): number {
+  switch (pc) {
+    case '2': return 1;
+    case '3': return 2;
+    case '4': return 3;
+    case '5+': return 4;
+    default: return 1;
+  }
+}
 
 interface ConflictData {
   peopleCount: string;
   myRole: string;
-  otherRoles: string[];
+  personRoles: string[]; // one per other person
   situationType: string;
   description: string;
   responseFormat: string;
@@ -50,13 +62,18 @@ interface ConflictResult {
 async function analyzeConflictWithAI(data: ConflictData): Promise<ConflictResult> {
   const systemPrompt = `Ви — AI психолог та езотерик застосунку Matrix of Soul. Ви аналізуєте міжособистісні конфлікти глибоко, персоналізовано та практично. Відповідайте структуровано, з конкретними порадами.`;
 
+  const participantsDesc = data.personRoles
+    .map((r, i) => `- Людина ${i + 1}: ${r || 'не вказано'}`)
+    .join('\n');
+
   const userPrompt = `Проаналізуй цю ситуацію і надай детальну відповідь у форматі JSON (без коментарів, тільки JSON):
 
 Ситуація:
 - Тип: ${data.situationType}
 - Кількість учасників: ${data.peopleCount}
 - Моя роль: ${data.myRole || 'не вказано'}
-- Роль іншої сторони: ${data.otherRoles.join(', ') || 'не вказано'}
+- Інші учасники:
+${participantsDesc}
 - Опис: ${data.description}
 - Формат відповіді: ${data.responseFormat || 'збалансований аналіз'}
 
@@ -65,10 +82,9 @@ async function analyzeConflictWithAI(data: ConflictData): Promise<ConflictResult
   "objectiveView": "об'єктивна оцінка ситуації (2-4 пункти)",
   "outsideView": "погляд стороннього спостерігача",
   "recommendations": [
-    {"person": "моя роль", "advice": "конкретна порада"},
-    {"person": "інша сторона", "advice": "порада для іншої сторони"}
+    {"person": "Я", "advice": "конкретна порада для вас"}${data.personRoles.map((r, i) => `,\n    {"person": "Людина ${i + 1} (${r || '?'})", "advice": "порада"}`).join('')}
   ],
-  "righteousnessAnalysis": "аналіз правоти обох сторін",
+  "righteousnessAnalysis": "аналіз правоти сторін",
   "mainAdvice": "головне послання та наступний крок"
 }`;
 
@@ -79,7 +95,6 @@ async function analyzeConflictWithAI(data: ConflictData): Promise<ConflictResult
     if (!jsonMatch) throw new Error('no JSON');
     return JSON.parse(jsonMatch[0]) as ConflictResult;
   } catch {
-    // Fallback: wrap the raw text in the result structure
     return {
       objectiveView: raw,
       outsideView: '',
@@ -100,11 +115,24 @@ export default function ConflictScreen() {
   const [data, setData] = useState<ConflictData>({
     peopleCount: '2',
     myRole: '',
-    otherRoles: [],
+    personRoles: [''],
     situationType: '',
     description: '',
     responseFormat: '',
   });
+
+  // Keep personRoles length in sync with peopleCount
+  const syncPersonRoles = (pc: string) => {
+    const n = otherCount(pc);
+    const updated = Array.from({ length: n }, (_, i) => data.personRoles[i] ?? '');
+    setData((prev) => ({ ...prev, peopleCount: pc, personRoles: updated }));
+  };
+
+  const setPersonRole = (index: number, role: string) => {
+    const updated = [...data.personRoles];
+    updated[index] = role;
+    setData((prev) => ({ ...prev, personRoles: updated }));
+  };
 
   const handleAnalyze = async () => {
     if (!data.description.trim()) {
@@ -130,6 +158,7 @@ export default function ConflictScreen() {
   };
 
   const progressPercent = step === 'result' ? 100 : ((step as number) / 4) * 100;
+  const n = otherCount(data.peopleCount);
 
   return (
     <View style={styles.container}>
@@ -138,7 +167,10 @@ export default function ConflictScreen() {
         colors={['#2D1B69', '#4C1D95']}
         style={styles.header}
       >
-        <TouchableOpacity onPress={() => step === 1 || step === 'result' ? router.back() : setStep((s) => (s as number) - 1 as Step)} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => step === 1 || step === 'result' ? router.back() : setStep((s) => (s as number) - 1 as Step)}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={22} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
@@ -170,7 +202,7 @@ export default function ConflictScreen() {
                 <TouchableOpacity
                   key={opt}
                   style={[styles.optionChip, data.peopleCount === opt && styles.optionChipSelected]}
-                  onPress={() => setData({ ...data, peopleCount: opt })}
+                  onPress={() => syncPersonRoles(opt)}
                 >
                   <Text style={[styles.optionChipText, data.peopleCount === opt && styles.optionChipTextSelected]}>
                     {opt}
@@ -192,23 +224,27 @@ export default function ConflictScreen() {
               ))}
             </View>
 
-            <Text style={styles.fieldLabel}>Роль іншої людини</Text>
-            <View style={styles.optionsWrap}>
-              {ROLE_OPTIONS.map((r) => (
-                <TouchableOpacity
-                  key={r}
-                  style={[styles.optionChip, data.otherRoles.includes(r) && styles.optionChipSelected]}
-                  onPress={() => {
-                    const roles = data.otherRoles.includes(r)
-                      ? data.otherRoles.filter((x) => x !== r)
-                      : [...data.otherRoles, r];
-                    setData({ ...data, otherRoles: roles });
-                  }}
-                >
-                  <Text style={[styles.optionChipText, data.otherRoles.includes(r) && styles.optionChipTextSelected]}>{r}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* Render one role picker per other person */}
+            {Array.from({ length: n }).map((_, i) => (
+              <View key={i}>
+                <Text style={styles.fieldLabel}>
+                  {n === 1 ? 'Роль іншої людини' : `Людина ${i + 1} — роль`}
+                </Text>
+                <View style={styles.optionsWrap}>
+                  {ROLE_OPTIONS.map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[styles.optionChip, data.personRoles[i] === r && styles.optionChipSelected]}
+                      onPress={() => setPersonRole(i, r)}
+                    >
+                      <Text style={[styles.optionChipText, data.personRoles[i] === r && styles.optionChipTextSelected]}>
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
 
             <Button title="Далі →" onPress={() => setStep(2)} style={styles.nextBtn} />
           </View>
@@ -281,6 +317,7 @@ export default function ConflictScreen() {
                 onPress={() => setData({ ...data, responseFormat: f.label })}
                 activeOpacity={0.7}
               >
+                <Ionicons name={f.icon} size={20} color={data.responseFormat === f.label ? Colors.primaryLight : Colors.textMuted} style={{ marginRight: 8 }} />
                 <View style={styles.formatLeft}>
                   <Text style={styles.formatLabel}>{f.label}</Text>
                   <Text style={styles.formatDesc}>{f.desc}</Text>
@@ -298,12 +335,12 @@ export default function ConflictScreen() {
               </View>
             ) : (
               <Button
-                title="🔮 Отримати Аналіз"
+                title="Отримати Аналіз"
                 onPress={handleAnalyze}
                 style={styles.nextBtn}
               />
             )}
-            {!isPremium && <Text style={styles.tokenHint}>💎 2 кристали</Text>}
+            {!isPremium && <Text style={styles.tokenHint}>Потрібен Premium</Text>}
           </View>
         )}
 
@@ -311,35 +348,47 @@ export default function ConflictScreen() {
         {step === 'result' && result && (
           <View>
             <Card style={styles.resultCard}>
-              <Text style={styles.resultSectionTitle}>🔍 Об'єктивна оцінка</Text>
-              <Text style={styles.resultText}>{result.objectiveView}</Text>
+              <View style={styles.resultSectionHeader}>
+                <Ionicons name="search-outline" size={16} color={Colors.primaryLight} />
+                <Text style={styles.resultSectionTitle}>Об'єктивна оцінка</Text>
+              </View>
+              <MarkdownText text={result.objectiveView} color={Colors.textSecondary} fontSize={FontSize.md} lineHeight={22} />
             </Card>
 
             <Card style={styles.resultCard}>
-              <Text style={styles.resultSectionTitle}>👁 Погляд збоку</Text>
-              <Text style={styles.resultText}>{result.outsideView}</Text>
+              <View style={styles.resultSectionHeader}>
+                <Ionicons name="eye-outline" size={16} color={Colors.primaryLight} />
+                <Text style={styles.resultSectionTitle}>Погляд збоку</Text>
+              </View>
+              <MarkdownText text={result.outsideView} color={Colors.textSecondary} fontSize={FontSize.md} lineHeight={22} />
             </Card>
 
             <Card style={styles.resultCard}>
-              <Text style={styles.resultSectionTitle}>💬 Рекомендації</Text>
+              <View style={styles.resultSectionHeader}>
+                <Ionicons name="chatbubble-outline" size={16} color={Colors.primaryLight} />
+                <Text style={styles.resultSectionTitle}>Рекомендації</Text>
+              </View>
               {result.recommendations.map((rec, i) => (
                 <View key={i} style={styles.recommendationBlock}>
                   <Text style={styles.recommendationPerson}>{rec.person}</Text>
-                  <Text style={styles.resultText}>{rec.advice}</Text>
+                  <MarkdownText text={rec.advice} color={Colors.textSecondary} fontSize={FontSize.md} lineHeight={22} />
                 </View>
               ))}
             </Card>
 
             <Card style={styles.resultCard}>
-              <Text style={styles.resultSectionTitle}>⚖️ Аналіз правоти</Text>
-              <Text style={styles.resultText}>{result.righteousnessAnalysis}</Text>
+              <View style={styles.resultSectionHeader}>
+                <Ionicons name="scale-outline" size={16} color={Colors.primaryLight} />
+                <Text style={styles.resultSectionTitle}>Аналіз правоти</Text>
+              </View>
+              <MarkdownText text={result.righteousnessAnalysis} color={Colors.textSecondary} fontSize={FontSize.md} lineHeight={22} />
             </Card>
 
             <LinearGradient
               colors={['#2D1B69', '#4C1D95', '#6D28D9']}
               style={styles.mainAdviceCard}
             >
-              <Text style={styles.mainAdviceText}>{result.mainAdvice}</Text>
+              <MarkdownText text={result.mainAdvice} color="#FFFFFF" fontSize={FontSize.md} lineHeight={24} />
             </LinearGradient>
 
             <Button
@@ -348,7 +397,7 @@ export default function ConflictScreen() {
               onPress={() => {
                 setStep(1);
                 setResult(null);
-                setData({ peopleCount: '2', myRole: '', otherRoles: [], situationType: '', description: '', responseFormat: '' });
+                setData({ peopleCount: '2', myRole: '', personRoles: [''], situationType: '', description: '', responseFormat: '' });
               }}
               style={styles.nextBtn}
             />
@@ -529,11 +578,16 @@ const styles = StyleSheet.create({
   nextBtn: { marginTop: Spacing.lg },
 
   resultCard: { marginBottom: Spacing.md },
+  resultSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
   resultSectionTitle: {
     color: Colors.primaryLight,
     fontSize: FontSize.md,
     fontWeight: '700',
-    marginBottom: Spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },

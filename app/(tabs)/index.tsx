@@ -28,6 +28,7 @@ import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
 import { GIFT_DIAMONDS } from '../../lib/notifications';
 import { askClaude } from '../../lib/claude';
+import { MarkdownText } from '../../components/ui/MarkdownText';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const MODAL_SUMMARY_COST = 3;
@@ -49,7 +50,21 @@ function DailyCardFlip() {
 
   const handleReveal = () => {
     if (revealed) return;
-    Animated.spring(flipAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }).start(() => setRevealed(true));
+    Animated.spring(flipAnim, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }).start(() => {
+      setRevealed(true);
+      // Save card-of-day to daily history (once per day)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const state = useAppStore.getState();
+      if (!state.dayCardHistory.some((e) => e.date === todayStr)) {
+        state.addDayCardEntry({
+          date: todayStr,
+          cardId: card.id,
+          cardName: card.nameUk,
+          cardMeaning: card.upright.slice(0, 220),
+          keywords: card.keywords.slice(0, 5),
+        });
+      }
+    });
   };
 
   const frontRotate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
@@ -336,13 +351,13 @@ ${userName ? `Ім'я: ${userName}.` : ''}
           {/* Greeting */}
           <View style={styles.greetingRow}>
             <View>
-              <Text style={styles.greeting}>{userName ? `Привіт, ${userName}! 👋` : 'Добрий день! 👋'}</Text>
+              <Text style={styles.greeting}>{userName ? `Привіт, ${userName}!` : 'Добрий день!'}</Text>
               <Text style={styles.dateText}>{dateStr}</Text>
             </View>
             <View style={styles.greetingRight}>
               {streak > 0 && (
                 <TouchableOpacity style={styles.streakBadge} onPress={() => router.push('/profile/achievements' as any)}>
-                  <Text style={styles.streakEmoji}>🔥</Text>
+                  <Ionicons name="flame" size={16} color="#F97316" />
                   <Text style={styles.streakCount}>{streak}</Text>
                 </TouchableOpacity>
               )}
@@ -356,7 +371,7 @@ ${userName ? `Ім'я: ${userName}.` : ''}
           {/* Affirmation */}
           {affirmation && (
             <Card style={styles.affirmationCard}>
-              <Text style={styles.affirmationEmoji}>✨</Text>
+              <Ionicons name="sparkles" size={20} color={Colors.accent} />
               <Text style={styles.affirmationText}>{affirmation.body}</Text>
             </Card>
           )}
@@ -369,7 +384,11 @@ ${userName ? `Ім'я: ${userName}.` : ''}
                   colors={giftClaimedToday ? ['#14532D', '#166534', '#15803D'] : ['#4C1D95', '#6D28D9', '#7C3AED']}
                   style={giftBannerStyles.banner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 >
-                  <Text style={giftBannerStyles.icon}>{giftClaimedToday ? '✅' : '🎁'}</Text>
+                  <Ionicons
+                    name={giftClaimedToday ? 'checkmark-circle' : 'gift'}
+                    size={36}
+                    color={giftClaimedToday ? '#6EE7B7' : Colors.accent}
+                  />
                   <View style={giftBannerStyles.info}>
                     <Text style={giftBannerStyles.title}>{giftClaimedToday ? 'Подарунок зібрано!' : 'У тебе є подарунок!'}</Text>
                     <Text style={giftBannerStyles.sub}>{giftClaimedToday ? `+${GIFT_DIAMONDS} кристалів додано` : `Забери ${GIFT_DIAMONDS} кристали — безкоштовний розклад Таро`}</Text>
@@ -414,7 +433,7 @@ ${userName ? `Ім'я: ${userName}.` : ''}
           {/* Meditations Banner */}
           <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/meditation')}>
             <LinearGradient colors={['#0F2E2A', '#064E3B', '#065F46']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.meditationBanner}>
-              <Text style={styles.meditationBannerEmoji}>🧘</Text>
+              <Ionicons name="leaf-outline" size={36} color="#6EE7B7" />
               <View style={styles.meditationBannerInfo}>
                 <Text style={styles.meditationBannerTitle}>Медитації</Text>
                 <Text style={styles.meditationBannerSub}>Ранкові · Чакри · Сон · Маніфестація</Text>
@@ -484,7 +503,13 @@ ${userName ? `Ім'я: ${userName}.` : ''}
                     <Text style={modalStyles.summaryLoadingText}>AI аналізує матрицю...</Text>
                   </View>
                 ) : modalSummary ? (
-                  <Text style={modalStyles.summaryText}>{modalSummary}</Text>
+                  <MarkdownText
+                    text={modalSummary}
+                    color={Colors.textSecondary}
+                    fontSize={12}
+                    lineHeight={17}
+                    style={{ textAlign: 'center' } as any}
+                  />
                 ) : null}
               </View>
 
@@ -526,13 +551,11 @@ const styles = StyleSheet.create({
   dateText: { color: Colors.textMuted, fontSize: FontSize.sm, marginTop: 2, textTransform: 'capitalize' },
   greetingRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(249,115,22,0.15)', paddingHorizontal: Spacing.sm, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: '#F97316' },
-  streakEmoji: { fontSize: 16 },
   streakCount: { color: '#F97316', fontSize: FontSize.sm, fontWeight: '800' },
   notifBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border, position: 'relative' },
   notifDot: { position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.error, borderWidth: 1, borderColor: Colors.bg },
 
   affirmationCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md, borderColor: Colors.accentMuted, paddingVertical: Spacing.sm },
-  affirmationEmoji: { fontSize: 20 },
   affirmationText: { color: Colors.textSecondary, fontSize: FontSize.sm, lineHeight: 18, flex: 1, fontStyle: 'italic' },
 
   matrixDayCard: { borderRadius: BorderRadius.xl, padding: Spacing.lg, marginBottom: Spacing.lg },
@@ -547,7 +570,6 @@ const styles = StyleSheet.create({
   sectionTitle: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '700', marginBottom: Spacing.md, marginTop: Spacing.md },
 
   meditationBanner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, borderRadius: BorderRadius.xl, padding: Spacing.lg, marginBottom: Spacing.md },
-  meditationBannerEmoji: { fontSize: 36 },
   meditationBannerInfo: { flex: 1, gap: 3 },
   meditationBannerTitle: { color: '#FFFFFF', fontSize: FontSize.lg, fontWeight: '700' },
   meditationBannerSub: { color: '#6EE7B7', fontSize: FontSize.sm },
@@ -586,7 +608,6 @@ const modalStyles = StyleSheet.create({
 
 const giftBannerStyles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, borderRadius: BorderRadius.xl, padding: Spacing.lg, marginBottom: Spacing.md },
-  icon: { fontSize: 36 },
   info: { flex: 1 },
   title: { color: '#FFFFFF', fontSize: FontSize.md, fontWeight: '800' },
   sub: { color: 'rgba(255,255,255,0.75)', fontSize: FontSize.sm, marginTop: 3, lineHeight: 18 },

@@ -70,7 +70,8 @@ const THEMES = [
 
 export default function PeriodScreen() {
   const router = useRouter();
-  const isPremium = useAppStore((s) => s.isPremium);
+  const isPremium      = useAppStore((s) => s.isPremium);
+  const addTarotSpread = useAppStore((s) => s.addTarotSpread);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [selectedTheme, setSelectedTheme] = useState('general');
   const [question, setQuestion] = useState('');
@@ -105,6 +106,14 @@ export default function PeriodScreen() {
       setIsLoading(false);
       setShowResult(true);
       setActiveCard(0);
+
+      addTarotSpread({
+        id: Date.now().toString(),
+        type: `period_${selectedPeriod}`,
+        question,
+        cards: drawn.map((c) => c.card.id),
+        createdAt: new Date().toISOString(),
+      });
     }, 2000);
   };
 
@@ -341,7 +350,10 @@ export default function PeriodScreen() {
               </View>
 
               <View style={styles.adviceBox}>
-                <Text style={styles.adviceTitle}>💡 Порада</Text>
+                <View style={styles.adviceTitleRow}>
+                  <Ionicons name="bulb-outline" size={14} color={Colors.accent} />
+                  <Text style={styles.adviceTitle}>Порада</Text>
+                </View>
                 <Text style={styles.adviceText}>{cards[activeCard].card.advice}</Text>
               </View>
 
@@ -699,6 +711,11 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     gap: 6,
+  },
+  adviceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   adviceTitle: {
     color: Colors.accent,

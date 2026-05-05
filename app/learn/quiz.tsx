@@ -234,7 +234,7 @@ export default function TarotQuizScreen() {
           stats={[
             { label: locale === 'uk' ? 'Правильних:' : 'Correct:', value: `${score}/${questions.length}` },
             { label: '', value: `${pct}%` },
-            ...(isNewRecord ? [{ label: '🏆', value: locale === 'uk' ? 'Новий рекорд!' : 'New record!' }] : []),
+            ...(isNewRecord ? [{ label: locale === 'uk' ? 'Рекорд' : 'Record', value: locale === 'uk' ? 'Новий рекорд!' : 'New record!' }] : []),
           ]}
         >
           <TouchableOpacity onPress={restart}>

@@ -161,7 +161,6 @@ export default function GuessTheCardScreen() {
   if (finished) {
     const pct = Math.round((score / rounds.length) * 100);
     const xpEarned = score * XP_PER_CORRECT;
-    const emoji = pct >= 80 ? '🏆' : pct >= 50 ? '⭐' : '📚';
     return (
       <View style={styles.root}>
         {screenHeader}
@@ -173,7 +172,7 @@ export default function GuessTheCardScreen() {
           stats={[
             { label: isUk ? 'Правильних:' : 'Correct:', value: `${score}/${rounds.length}` },
             { label: '', value: `${pct}%` },
-            ...(isNewRecord ? [{ label: '🏆', value: isUk ? 'Новий рекорд!' : 'New record!' }] : []),
+            ...(isNewRecord ? [{ label: isUk ? 'Рекорд' : 'Record', value: isUk ? 'Новий рекорд!' : 'New record!' }] : []),
           ]}
         >
           <TouchableOpacity onPress={restart}>

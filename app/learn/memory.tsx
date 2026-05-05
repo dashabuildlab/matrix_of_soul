@@ -300,7 +300,7 @@ export default function MemoryMatchScreen() {
           stats={[
             { label: isUk ? 'Спроби:' : 'Attempts:', value: String(attempts) },
             { label: isUk ? 'Час:' : 'Time:', value: formatTime(timer) },
-            ...(isNewRecord ? [{ label: '🏆', value: isUk ? 'Новий рекорд!' : 'New record!' }] : []),
+            ...(isNewRecord ? [{ label: isUk ? 'Рекорд' : 'Record', value: isUk ? 'Новий рекорд!' : 'New record!' }] : []),
             ...(!isNewRecord && getGameRecord('memory') > 0 ? [{ label: isUk ? 'Рекорд:' : 'Record:', value: `${getGameRecord('memory')} ${isUk ? 'спроб' : 'attempts'}` }] : []),
           ]}
         >

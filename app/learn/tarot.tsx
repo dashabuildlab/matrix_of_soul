@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  Image,
+  FlatList,
+  Dimensions,
 } from 'react-native';
+import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
 import { TAROT_CARDS } from '../../lib/staticData';
+import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
+
+const { width } = Dimensions.get('window');
+const CARD_COL = 3;
+const CARD_WIDTH = (width - Spacing.lg * 2 - Spacing.sm * (CARD_COL - 1)) / CARD_COL;
 
 type GameMode = 'browse' | 'quiz_keyword' | 'quiz_name' | 'quiz_yesno' | 'result';
 
@@ -22,6 +32,8 @@ interface QuizQuestion {
   type: 'keyword' | 'name' | 'yesno';
 }
 
+// ─── Question generators ──────────────────────────────────────────────────────
+
 function generateKeywordQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
   const card = cards[Math.floor(Math.random() * cards.length)];
   const keyword = card.keywords[Math.floor(Math.random() * card.keywords.length)];
@@ -31,12 +43,7 @@ function generateKeywordQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
     .slice(0, 3)
     .map((c) => c.nameUk);
   const options = [card.nameUk, ...wrongs].sort(() => Math.random() - 0.5);
-  return {
-    card,
-    options,
-    correctIndex: options.indexOf(card.nameUk),
-    type: 'keyword',
-  };
+  return { card, options, correctIndex: options.indexOf(card.nameUk), type: 'keyword' };
 }
 
 function generateNameQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
@@ -47,33 +54,31 @@ function generateNameQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
     .slice(0, 3)
     .map((c) => c.keywords[0]);
   const options = [card.keywords[0], ...wrongs].sort(() => Math.random() - 0.5);
-  return {
-    card,
-    options,
-    correctIndex: options.indexOf(card.keywords[0]),
-    type: 'name',
-  };
+  return { card, options, correctIndex: options.indexOf(card.keywords[0]), type: 'name' };
 }
 
 function generateYesNoQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
   const card = cards[Math.floor(Math.random() * cards.length)];
   const options = ['Так', 'Ні', 'Можливо'];
   const correctAnswer = card.yesNo === 'yes' ? 'Так' : card.yesNo === 'no' ? 'Ні' : 'Можливо';
-  return {
-    card,
-    options,
-    correctIndex: options.indexOf(correctAnswer),
-    type: 'yesno',
-  };
+  return { card, options, correctIndex: options.indexOf(correctAnswer), type: 'yesno' };
 }
 
-const DIFFICULTY_LEVELS = [
+const GAME_MODES = [
   { id: 'quiz_keyword', label: 'Ключові слова', icon: 'key-outline' as const, description: 'Вгадай карту за ключовим словом', xp: 10 },
-  { id: 'quiz_name', label: 'Значення', icon: 'book-outline' as const, description: 'Вгадай значення карти за назвою', xp: 15 },
-  { id: 'quiz_yesno', label: 'Так чи Ні', icon: 'help-outline' as const, description: 'Вгадай відповідь карти', xp: 20 },
+  { id: 'quiz_name',    label: 'Значення',      icon: 'book-outline' as const, description: 'Вгадай значення карти за назвою',  xp: 15 },
+  { id: 'quiz_yesno',  label: 'Так чи Ні',     icon: 'help-outline' as const, description: 'Вгадай відповідь карти',           xp: 20 },
 ];
 
 const QUIZ_LENGTH = 5;
+
+const INSTRUCTIONS: Record<string, string> = {
+  quiz_keyword: 'Тобі показують ключове слово — вгадай, якій карті воно належить. Чим більше ти вгадаєш, тим більше XP отримаєш!',
+  quiz_name:    'Тобі показують зображення карти — обери правильне ключове слово, що відповідає їй.',
+  quiz_yesno:   'Тобі показують карту — визнач, яку відповідь вона дає на пряме запитання: Так, Ні або Можливо.',
+};
+
+// ─── Main component ──────────────────────────────────────────────────────────
 
 export default function TarotLearnScreen() {
   const [mode, setMode] = useState<GameMode>('browse');
@@ -83,7 +88,69 @@ export default function TarotLearnScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [quizType, setQuizType] = useState<GameMode>('quiz_keyword');
+
+  // Timer
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Instructions modal
+  const [showInstructions, setShowInstructions] = useState(false);
+  const hasSeenRef = useRef(false);
+
+  // Encyclopedia modal
+  const [encyclopediaCard, setEncyclopediaCard] = useState<(typeof TAROT_CARDS)[0] | null>(null);
+
   const addTokens = useAppStore((s) => s.addTokens);
+  const addXP     = useAppStore((s) => s.addXP);
+
+  // ── Timer helpers ──
+  const startTimer = useCallback(() => {
+    if (timerRef.current) return;
+    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+  }, []);
+
+  const pauseTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const resetTimer = useCallback(() => {
+    pauseTimer();
+    setElapsed(0);
+  }, [pauseTimer]);
+
+  useEffect(() => {
+    return () => pauseTimer();
+  }, [pauseTimer]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  // ── Instructions ──
+  const openInstructions = () => {
+    pauseTimer();
+    setShowInstructions(true);
+  };
+
+  const closeInstructions = () => {
+    setShowInstructions(false);
+    if (mode !== 'browse' && mode !== 'result') startTimer();
+  };
+
+  // ── Quiz logic ──
+  const generateQuestion = (type: GameMode): QuizQuestion => {
+    switch (type) {
+      case 'quiz_keyword': return generateKeywordQuestion(TAROT_CARDS);
+      case 'quiz_name':    return generateNameQuestion(TAROT_CARDS);
+      case 'quiz_yesno':   return generateYesNoQuestion(TAROT_CARDS);
+      default:             return generateKeywordQuestion(TAROT_CARDS);
+    }
+  };
 
   const startQuiz = (type: GameMode) => {
     setQuizType(type);
@@ -91,17 +158,15 @@ export default function TarotLearnScreen() {
     setQuestionIndex(0);
     setSelectedAnswer(null);
     setShowExplanation(false);
-    const q = generateQuestion(type);
-    setCurrentQuestion(q);
+    setCurrentQuestion(generateQuestion(type));
     setMode(type);
-  };
+    resetTimer();
 
-  const generateQuestion = (type: GameMode): QuizQuestion => {
-    switch (type) {
-      case 'quiz_keyword': return generateKeywordQuestion(TAROT_CARDS);
-      case 'quiz_name': return generateNameQuestion(TAROT_CARDS);
-      case 'quiz_yesno': return generateYesNoQuestion(TAROT_CARDS);
-      default: return generateKeywordQuestion(TAROT_CARDS);
+    if (!hasSeenRef.current) {
+      hasSeenRef.current = true;
+      setShowInstructions(true);
+    } else {
+      startTimer();
     }
   };
 
@@ -117,10 +182,11 @@ export default function TarotLearnScreen() {
   const nextQuestion = () => {
     const nextIdx = questionIndex + 1;
     if (nextIdx >= QUIZ_LENGTH) {
-      // Quiz complete
-      const level = DIFFICULTY_LEVELS.find((d) => d.id === quizType);
+      pauseTimer();
+      const level = GAME_MODES.find((d) => d.id === quizType);
       const xpEarned = score * (level?.xp ?? 10);
-      addTokens(Math.floor(xpEarned / 50)); // Convert XP to tokens
+      addXP(xpEarned);
+      addTokens(Math.floor(xpEarned / 50));
       setMode('result');
     } else {
       setQuestionIndex(nextIdx);
@@ -130,136 +196,288 @@ export default function TarotLearnScreen() {
     }
   };
 
+  const getQuestion = () => {
+    if (!currentQuestion) return '';
+    switch (currentQuestion.type) {
+      case 'keyword':
+        return `Яка карта пов'язана з ключовим словом "${currentQuestion.card.keywords[0]}"?`;
+      case 'name':
+        return `Яке ключове слово відповідає карті "${currentQuestion.card.nameUk}"?`;
+      case 'yesno':
+        return `Яку відповідь дає карта "${currentQuestion.card.nameUk}" на пряме питання?`;
+    }
+  };
+
+  // ─── BROWSE mode ───────────────────────────────────────────────────────────
+
   if (mode === 'browse') {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.header}>
-          <Ionicons name="library-outline" size={40} color="#A78BFA" />
-          <Text style={styles.headerTitle}>Вивчення Таро</Text>
-          <Text style={styles.headerSubtitle}>Грай та запам'ятовуй значення карт</Text>
-        </LinearGradient>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
 
-        {/* Quiz modes */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Режими навчання</Text>
-          {DIFFICULTY_LEVELS.map((level) => (
-            <TouchableOpacity
-              key={level.id}
-              style={styles.levelCard}
-              onPress={() => startQuiz(level.id as GameMode)}
-              activeOpacity={0.8}
-            >
-              <Card style={styles.levelCardInner}>
-                <View style={styles.levelIcon}>
-                  <Ionicons name={level.icon} size={24} color={Colors.primary} />
-                </View>
-                <View style={styles.levelInfo}>
-                  <Text style={styles.levelTitle}>{level.label}</Text>
-                  <Text style={styles.levelDesc}>{level.description}</Text>
-                </View>
-                <View style={styles.xpBadge}>
-                  <Text style={styles.xpText}>+{level.xp} XP</Text>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ScrollView style={styles.container} contentContainerStyle={styles.browseContent}>
+          {/* Header */}
+          <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.browseHeader}>
+            <Ionicons name="library-outline" size={40} color="#A78BFA" />
+            <Text style={styles.browseTitle}>Вивчення Таро</Text>
+            <Text style={styles.browseSubtitle}>Грай та запам'ятовуй значення карт</Text>
+          </LinearGradient>
 
-      </ScrollView>
+          {/* Game mode cards */}
+          <View style={styles.browseSection}>
+            {GAME_MODES.map((level) => (
+              <TouchableOpacity
+                key={level.id}
+                onPress={() => startQuiz(level.id as GameMode)}
+                activeOpacity={0.8}
+              >
+                <Card style={styles.levelCardInner}>
+                  <View style={styles.levelIcon}>
+                    <Ionicons name={level.icon} size={24} color={Colors.primary} />
+                  </View>
+                  <View style={styles.levelInfo}>
+                    <Text style={styles.levelTitle}>{level.label}</Text>
+                    <Text style={styles.levelDesc}>{level.description}</Text>
+                  </View>
+                  <View style={styles.xpBadge}>
+                    <Text style={styles.xpText}>+{level.xp} XP</Text>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Encyclopedia section */}
+          <Text style={styles.encyclopediaTitle}>Карти таро</Text>
+          <View style={styles.cardGrid}>
+            {TAROT_CARDS.map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                style={styles.cardGridItem}
+                onPress={() => setEncyclopediaCard(card)}
+                activeOpacity={0.75}
+              >
+                {TAROT_IMAGES[card.id] ? (
+                  <Image source={TAROT_IMAGES[card.id]} style={styles.cardGridImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.cardGridImage, styles.cardGridFallback]}>
+                    <Text style={styles.cardGridNum}>{card.id}</Text>
+                  </View>
+                )}
+                <Text style={styles.cardGridName} numberOfLines={2}>{card.nameUk}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        {/* Encyclopedia detail modal */}
+        <Modal
+          visible={encyclopediaCard !== null}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setEncyclopediaCard(null)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <TouchableOpacity style={styles.modalClose} onPress={() => setEncyclopediaCard(null)}>
+                <Ionicons name="close" size={22} color={Colors.text} />
+              </TouchableOpacity>
+
+              {encyclopediaCard && (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={styles.modalCardRow}>
+                    {TAROT_IMAGES[encyclopediaCard.id] ? (
+                      <Image
+                        source={TAROT_IMAGES[encyclopediaCard.id]}
+                        style={styles.modalCardImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.modalCardImage, styles.cardGridFallback]}>
+                        <Text style={styles.cardGridNum}>{encyclopediaCard.id}</Text>
+                      </View>
+                    )}
+                    <View style={styles.modalCardInfo}>
+                      <Text style={styles.modalCardName}>{encyclopediaCard.nameUk}</Text>
+                      <Text style={styles.modalCardNameEn}>{encyclopediaCard.name}</Text>
+                      <View style={styles.keywordWrap}>
+                        {encyclopediaCard.keywords.map((kw) => (
+                          <View key={kw} style={styles.kwBadge}>
+                            <Text style={styles.kwText}>{kw}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.modalMeaning}>
+                    <View style={styles.modalMeaningLabelRow}>
+                      <Ionicons name="arrow-up-circle-outline" size={14} color={Colors.primaryLight} />
+                      <Text style={styles.modalMeaningLabel}>Пряме значення</Text>
+                    </View>
+                    <Text style={styles.modalMeaningText}>{encyclopediaCard.upright}</Text>
+                  </View>
+                  <View style={styles.modalMeaning}>
+                    <View style={styles.modalMeaningLabelRow}>
+                      <Ionicons name="sync-outline" size={14} color={Colors.primaryLight} />
+                      <Text style={styles.modalMeaningLabel}>Перевернута</Text>
+                    </View>
+                    <Text style={styles.modalMeaningText}>{encyclopediaCard.reversed}</Text>
+                  </View>
+                  <View style={styles.modalMeaning}>
+                    <View style={styles.modalMeaningLabelRow}>
+                      <Ionicons name="bulb-outline" size={14} color={Colors.accent} />
+                      <Text style={[styles.modalMeaningLabel, { color: Colors.accent }]}>Порада</Text>
+                    </View>
+                    <Text style={styles.modalMeaningText}>{encyclopediaCard.advice}</Text>
+                  </View>
+                  <View style={{ height: 32 }} />
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
+      </>
     );
   }
 
+  // ─── RESULT mode ───────────────────────────────────────────────────────────
+
   if (mode === 'result') {
-    const level = DIFFICULTY_LEVELS.find((d) => d.id === quizType);
+    const level = GAME_MODES.find((d) => d.id === quizType);
     const xpEarned = score * (level?.xp ?? 10);
     const tokensEarned = Math.floor(xpEarned / 50);
     const percentage = Math.round((score / QUIZ_LENGTH) * 100);
 
     return (
-      <View style={styles.container}>
-        <LinearGradient colors={['#0F0820', '#1E1B4B']} style={styles.resultScreen}>
-          <Text style={styles.resultEmoji}>
-            {percentage >= 80 ? '🎉' : percentage >= 60 ? '👏' : '💪'}
-          </Text>
-          <Text style={styles.resultTitle}>
-            {percentage >= 80 ? 'Чудово!' : percentage >= 60 ? 'Добре!' : 'Продовжуй!'}
-          </Text>
-          <Text style={styles.resultScore}>{score}/{QUIZ_LENGTH}</Text>
-          <Text style={styles.resultPercent}>{percentage}%</Text>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.container}>
+          <LinearGradient colors={['#0F0820', '#1E1B4B']} style={styles.resultScreen}>
+            <Text style={styles.resultEmoji}>
+              {percentage >= 80 ? '🎉' : percentage >= 60 ? '👏' : '💪'}
+            </Text>
+            <Text style={styles.resultTitle}>
+              {percentage >= 80 ? 'Чудово!' : percentage >= 60 ? 'Добре!' : 'Продовжуй!'}
+            </Text>
+            <Text style={styles.resultScore}>{score}/{QUIZ_LENGTH}</Text>
+            <Text style={styles.resultPercent}>{percentage}%</Text>
+            <Text style={styles.resultTime}>⏱ {formatTime(elapsed)}</Text>
 
-          <View style={styles.resultRewards}>
-            <View style={styles.rewardItem}>
-              <Text style={styles.rewardValue}>+{xpEarned}</Text>
-              <Text style={styles.rewardLabel}>XP</Text>
-            </View>
-            {tokensEarned > 0 && (
+            <View style={styles.resultRewards}>
               <View style={styles.rewardItem}>
-                <Ionicons name="diamond" size={24} color={Colors.accent} />
-                <Text style={styles.rewardValue}>+{tokensEarned}</Text>
-                <Text style={styles.rewardLabel}>Кристалів</Text>
+                <Text style={styles.rewardValue}>+{xpEarned}</Text>
+                <Text style={styles.rewardLabel}>XP</Text>
               </View>
-            )}
-          </View>
+              {tokensEarned > 0 && (
+                <View style={styles.rewardItem}>
+                  <Ionicons name="diamond" size={24} color={Colors.accent} />
+                  <Text style={styles.rewardValue}>+{tokensEarned}</Text>
+                  <Text style={styles.rewardLabel}>Кристалів</Text>
+                </View>
+              )}
+            </View>
 
-          <TouchableOpacity style={styles.resultBtn} onPress={() => startQuiz(quizType)}>
-            <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.resultBtnGradient}>
-              <Text style={styles.resultBtnText}>Грати ще</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.resultBtn} onPress={() => startQuiz(quizType)}>
+              <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.resultBtnGradient}>
+                <Text style={styles.resultBtnText}>Грати ще</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.resultSecBtn} onPress={() => setMode('browse')}>
-            <Text style={styles.resultSecBtnText}>Повернутись</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
+            <TouchableOpacity style={styles.resultSecBtn} onPress={() => setMode('browse')}>
+              <Text style={styles.resultSecBtnText}>Повернутись до ігор</Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      </>
     );
   }
 
-  // Quiz mode
+  // ─── QUIZ mode ─────────────────────────────────────────────────────────────
+
   if (!currentQuestion) return null;
 
-  const getQuestion = () => {
-    switch (currentQuestion.type) {
-      case 'keyword':
-        return `Яка карта пов'язана з ключовим словом:\n"${currentQuestion.card.keywords[0]}"?`;
-      case 'name':
-        return `Яке ключове слово відповідає карті:\n"${currentQuestion.card.nameUk}"?`;
-      case 'yesno':
-        return `Яку відповідь дає карта\n"${currentQuestion.card.nameUk}" на пряме питання?`;
-    }
-  };
+  const showCardVisual = currentQuestion.type !== 'keyword';
+  const cardImg = TAROT_IMAGES[currentQuestion.card.id];
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#0F0820', '#1E1B4B']} style={{ flex: 1 }}>
-        {/* Progress */}
-        <View style={styles.quizHeader}>
-          <TouchableOpacity onPress={() => setMode('browse')}>
-            <Ionicons name="close" size={24} color={Colors.textMuted} />
-          </TouchableOpacity>
-          <View style={styles.progressBarTrack}>
-            <View style={[styles.progressBarFill, { width: `${(questionIndex / QUIZ_LENGTH) * 100}%` }]} />
-          </View>
-          <Text style={styles.progressLabel}>{questionIndex + 1}/{QUIZ_LENGTH}</Text>
-        </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
 
-        <ScrollView contentContainerStyle={styles.quizContent}>
-          {/* Score */}
+      {/* Instructions modal */}
+      <Modal visible={showInstructions} transparent animationType="fade" onRequestClose={closeInstructions}>
+        <View style={styles.instrOverlay}>
+          <View style={styles.instrSheet}>
+            <Text style={styles.instrTitle}>Як грати</Text>
+            <Text style={styles.instrText}>
+              {INSTRUCTIONS[quizType] ?? ''}
+            </Text>
+            <View style={styles.instrTips}>
+              <View style={styles.instrTipRow}>
+                <Ionicons name="timer-outline" size={18} color={Colors.primaryLight} />
+                <Text style={styles.instrTipText}>Час іде поки ти граєш</Text>
+              </View>
+              <View style={styles.instrTipRow}>
+                <Ionicons name="help-circle-outline" size={18} color={Colors.primaryLight} />
+                <Text style={styles.instrTipText}>Кнопка "?" — відкрити інструкцію (зупиняє таймер)</Text>
+              </View>
+              <View style={styles.instrTipRow}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={Colors.success} />
+                <Text style={styles.instrTipText}>Обирай відповідь — побачиш пояснення</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.instrBtn} onPress={closeInstructions}>
+              <Text style={styles.instrBtnText}>Зрозуміло, грати!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <View style={styles.container}>
+        <LinearGradient colors={['#0F0820', '#1E1B4B']} style={{ flex: 1 }}>
+          {/* Quiz header */}
+          <View style={styles.quizHeader}>
+            <TouchableOpacity onPress={() => { pauseTimer(); setMode('browse'); }} style={styles.quizHeaderBtn}>
+              <Ionicons name="arrow-back" size={22} color={Colors.textMuted} />
+            </TouchableOpacity>
+
+            <View style={styles.progressBarTrack}>
+              <View style={[styles.progressBarFill, { width: `${(questionIndex / QUIZ_LENGTH) * 100}%` }]} />
+            </View>
+
+            <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
+
+            <TouchableOpacity onPress={openInstructions} style={styles.quizHeaderBtn}>
+              <Ionicons name="help-circle-outline" size={22} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Score — centered, full width */}
           <View style={styles.scoreRow}>
             <Ionicons name="star" size={16} color={Colors.accent} />
-            <Text style={styles.scoreText}>{score} правильно</Text>
+            <Text style={styles.scoreText}>{score} / {QUIZ_LENGTH}</Text>
+            <Text style={styles.progressLabel}>{questionIndex + 1}/{QUIZ_LENGTH}</Text>
           </View>
 
-          {/* Card display */}
+          {/* Card visual */}
           <View style={styles.quizCard}>
-            {currentQuestion.type !== 'name' && (
+            {showCardVisual ? (
+              cardImg ? (
+                <Image source={cardImg} style={styles.quizCardImage} resizeMode="cover" />
+              ) : (
+                <LinearGradient colors={['#1E1B4B', '#4338CA']} style={styles.quizCardVisual}>
+                  <Text style={styles.quizCardNum}>{currentQuestion.card.id}</Text>
+                </LinearGradient>
+              )
+            ) : (
               <LinearGradient colors={['#1E1B4B', '#4338CA']} style={styles.quizCardVisual}>
-                <Text style={styles.quizCardNum}>{currentQuestion.card.id}</Text>
-                {currentQuestion.type === 'keyword' && (
-                  <Text style={styles.quizCardHint}>?</Text>
-                )}
+                <Ionicons name="help" size={44} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.quizCardHint}>?</Text>
               </LinearGradient>
             )}
+
             <Text style={styles.questionText}>{getQuestion()}</Text>
           </View>
 
@@ -288,6 +506,7 @@ export default function TarotLearnScreen() {
                   style={[styles.optionBtn, { backgroundColor: bgColor, borderColor }]}
                   onPress={() => handleAnswer(idx)}
                   disabled={selectedAnswer !== null}
+                  activeOpacity={0.75}
                 >
                   <Text style={styles.optionLetter}>{String.fromCharCode(65 + idx)}</Text>
                   <Text style={[styles.optionText, { color: textColor }]}>{opt}</Text>
@@ -302,64 +521,69 @@ export default function TarotLearnScreen() {
             })}
           </View>
 
-          {/* Explanation */}
+          {/* Explanation overlay — absolute bottom sheet */}
           {showExplanation && (
-            <Card style={styles.explanationCard}>
-              <Text style={styles.explanationTitle}>
-                {selectedAnswer === currentQuestion.correctIndex ? '✅ Правильно!' : '❌ Неправильно'}
-              </Text>
-              <Text style={styles.explanationText}>
-                {currentQuestion.card.nameUk} ({currentQuestion.card.name}) — {currentQuestion.card.upright}
-              </Text>
-              <TouchableOpacity style={styles.nextBtn} onPress={nextQuestion}>
-                <Text style={styles.nextBtnText}>
-                  {questionIndex < QUIZ_LENGTH - 1 ? 'Далі →' : 'Завершити'}
+            <View style={styles.explanationOverlay}>
+              <View style={styles.explanationSheet}>
+                <View style={styles.explanationTitleRow}>
+                  <Ionicons
+                    name={selectedAnswer === currentQuestion.correctIndex ? 'checkmark-circle' : 'close-circle'}
+                    size={22}
+                    color={selectedAnswer === currentQuestion.correctIndex ? '#10B981' : Colors.error}
+                  />
+                  <Text style={[styles.explanationTitle, { color: selectedAnswer === currentQuestion.correctIndex ? '#10B981' : Colors.error }]}>
+                    {selectedAnswer === currentQuestion.correctIndex ? 'Правильно!' : 'Неправильно'}
+                  </Text>
+                </View>
+                <Text style={styles.explanationText}>
+                  {currentQuestion.card.nameUk} ({currentQuestion.card.name}) — {currentQuestion.card.upright}
                 </Text>
-              </TouchableOpacity>
-            </Card>
+                <TouchableOpacity style={styles.nextBtn} onPress={nextQuestion}>
+                  <Text style={styles.nextBtnText}>
+                    {questionIndex < QUIZ_LENGTH - 1 ? 'Далі →' : 'Завершити'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
-        </ScrollView>
-      </LinearGradient>
-    </View>
+        </LinearGradient>
+      </View>
+    </>
   );
 }
 
+// ─── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
-  content: { paddingBottom: 100 },
 
-  header: {
+  // ── Browse ──
+  browseContent: { paddingBottom: 100 },
+  browseHeader: {
     alignItems: 'center',
     padding: Spacing.xl,
+    paddingTop: 60,
     gap: Spacing.sm,
   },
-  headerTitle: {
+  browseTitle: {
     color: Colors.text,
     fontSize: FontSize.xxl,
     fontWeight: '800',
   },
-  headerSubtitle: {
+  browseSubtitle: {
     color: '#A78BFA',
     fontSize: FontSize.md,
     textAlign: 'center',
   },
-
-  section: {
+  browseSection: {
     padding: Spacing.lg,
     gap: Spacing.sm,
   },
-  sectionTitle: {
-    color: Colors.text,
-    fontSize: FontSize.xl,
-    fontWeight: '700',
-    marginBottom: Spacing.xs,
-  },
-
-  levelCard: { marginBottom: Spacing.xs },
   levelCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   levelIcon: {
     width: 48,
@@ -382,31 +606,143 @@ const styles = StyleSheet.create({
   },
   xpText: { color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700' },
 
-  meaningSection: {
-    gap: 6,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+  // ── Encyclopedia ──
+  encyclopediaTitle: {
+    color: Colors.text,
+    fontSize: FontSize.xl,
+    fontWeight: '700',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
   },
-  meaningLabel: {
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  cardGridItem: {
+    width: CARD_WIDTH,
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardGridImage: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.5,
+    borderRadius: BorderRadius.sm,
+  },
+  cardGridFallback: {
+    backgroundColor: Colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardGridNum: {
+    color: Colors.accent,
+    fontSize: FontSize.lg,
+    fontWeight: '800',
+  },
+  cardGridName: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+
+  // ── Encyclopedia modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: Colors.bgCard,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    maxHeight: '90%',
+  },
+  modalClose: {
+    alignSelf: 'flex-end',
+    padding: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  modalCardRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  modalCardImage: {
+    width: 90,
+    height: 135,
+    borderRadius: BorderRadius.md,
+  },
+  modalCardInfo: {
+    flex: 1,
+    gap: 6,
+    justifyContent: 'center',
+  },
+  modalCardName: {
+    color: Colors.text,
+    fontSize: FontSize.xl,
+    fontWeight: '800',
+  },
+  modalCardNameEn: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+  },
+  keywordWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 4,
+  },
+  kwBadge: {
+    backgroundColor: Colors.primaryMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  kwText: {
+    color: Colors.primaryLight,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  modalMeaning: {
+    marginBottom: Spacing.md,
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.md,
+  },
+  modalMeaningLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 4,
+  },
+  modalMeaningLabel: {
     color: Colors.primaryLight,
     fontSize: FontSize.sm,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  meaningText: {
+  modalMeaningText: {
     color: Colors.textSecondary,
     fontSize: FontSize.sm,
     lineHeight: 20,
   },
 
-  // Quiz styles
+  // ── Quiz header ──
   quizHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.lg,
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingTop: 56,
+    paddingBottom: Spacing.sm,
   },
+  quizHeaderBtn: { padding: Spacing.xs },
   progressBarTrack: {
     flex: 1,
     height: 8,
@@ -419,6 +755,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.full,
   },
+  timerText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    minWidth: 42,
+    textAlign: 'right',
+  },
   progressLabel: {
     color: Colors.textMuted,
     fontSize: FontSize.sm,
@@ -427,38 +770,53 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
-  quizContent: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: 40 },
+  // ── Score ──
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    alignSelf: 'flex-end',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
   },
-  scoreText: { color: Colors.accent, fontSize: FontSize.sm, fontWeight: '700' },
+  scoreText: { color: Colors.accent, fontSize: FontSize.lg, fontWeight: '800' },
 
+  // ── Card visual ──
   quizCard: {
     alignItems: 'center',
     gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  quizCardImage: {
+    width: 90,
+    height: 130,
+    borderRadius: BorderRadius.md,
   },
   quizCardVisual: {
-    width: 100,
-    height: 140,
-    borderRadius: BorderRadius.lg,
+    width: 90,
+    height: 130,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: 4,
   },
   quizCardNum: { color: Colors.accent, fontSize: FontSize.title, fontWeight: '900' },
-  quizCardHint: { color: 'rgba(255,255,255,0.5)', fontSize: 40, fontWeight: '800' },
+  quizCardHint: { color: 'rgba(255,255,255,0.4)', fontSize: 36, fontWeight: '800' },
   questionText: {
     color: Colors.text,
     fontSize: FontSize.lg,
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 26,
+    paddingHorizontal: Spacing.sm,
   },
 
-  optionsGrid: { gap: Spacing.sm },
+  // ── Options ──
+  optionsGrid: {
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
   optionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -484,9 +842,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  explanationCard: {
+  // ── Explanation overlay ──
+  explanationOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  explanationSheet: {
+    backgroundColor: Colors.bgCard,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     gap: Spacing.md,
-    borderColor: Colors.primary,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  explanationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   explanationTitle: {
     color: Colors.text,
@@ -510,7 +886,58 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Result styles
+  // ── Instructions modal ──
+  instrOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  instrSheet: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  instrTitle: {
+    color: Colors.text,
+    fontSize: FontSize.xl,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  instrText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.md,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  instrTips: { gap: Spacing.sm },
+  instrTipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  instrTipText: {
+    color: Colors.text,
+    fontSize: FontSize.sm,
+    flex: 1,
+  },
+  instrBtn: {
+    backgroundColor: Colors.primary,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  instrBtnText: {
+    color: '#FFFFFF',
+    fontSize: FontSize.md,
+    fontWeight: '700',
+  },
+
+  // ── Result ──
   resultScreen: {
     flex: 1,
     alignItems: 'center',
@@ -522,6 +949,7 @@ const styles = StyleSheet.create({
   resultTitle: { color: Colors.text, fontSize: FontSize.xxl, fontWeight: '800' },
   resultScore: { color: Colors.accent, fontSize: 56, fontWeight: '900' },
   resultPercent: { color: Colors.textMuted, fontSize: FontSize.xl, fontWeight: '600' },
+  resultTime: { color: Colors.textMuted, fontSize: FontSize.md },
   resultRewards: {
     flexDirection: 'row',
     gap: Spacing.xl,
@@ -532,7 +960,6 @@ const styles = StyleSheet.create({
   rewardItem: { alignItems: 'center', gap: 4 },
   rewardValue: { color: Colors.accent, fontSize: FontSize.xxl, fontWeight: '800' },
   rewardLabel: { color: Colors.textMuted, fontSize: FontSize.sm },
-
   resultBtn: {
     width: '100%',
     borderRadius: BorderRadius.xl,

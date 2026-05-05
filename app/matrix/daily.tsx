@@ -17,6 +17,7 @@ import { getDailyEnergy, calculateMatrix } from '../../lib/matrix-calc';
 import { getEnergyById } from '../../constants/energies';
 import { askClaude } from '../../lib/claude';
 import { useAppStore } from '../../stores/useAppStore';
+import { MarkdownText } from '../../components/ui/MarkdownText';
 
 const SYSTEM_PROMPT =
   'Ти — езотеричний аналітик Матриці Долі. Напиши прогноз рівно 5 речень: перші 4 — персональний прогноз на день на основі 4 енергій (тепло, натхненно, практично), 5-е речення обов\'язково порівнює енергії дня з матрицею долі користувача і нативно підштовхує до її генерації (наприклад: "Щоб дізнатись як ці енергії резонують із вашою особистою Матрицею Долі — згенеруйте її прямо зараз"). Мова — українська. Без вступів, підписів, нумерації та зайвих переносів рядка.';
@@ -32,6 +33,7 @@ export default function DailyMatrixScreen() {
   const isPremium           = useAppStore((s) => s.isPremium);
   const dailyMatrixCache    = useAppStore((s) => s.dailyMatrixCache);
   const setDailyMatrixCache = useAppStore((s) => s.setDailyMatrixCache);
+  const addDayMatrixEntry   = useAppStore((s) => s.addDayMatrixEntry);
   const userBirthDate       = useAppStore((s) => s.userBirthDate);
   const tokens              = useAppStore((s) => s.tokens);
   const spendCrystals       = useAppStore((s) => s.spendCrystals);
@@ -105,6 +107,15 @@ export default function DailyMatrixScreen() {
 
       setForecast(result);
       setDailyMatrixCache(dateStr, result);
+      // Save to daily matrix history (once per day)
+      if (!useAppStore.getState().dayMatrixHistory.some((e) => e.date === dateStr)) {
+        addDayMatrixEntry({
+          date: dateStr,
+          summary: result,
+          energyId: dailyEnergy,
+          energyName: energy?.name ?? String(dailyEnergy),
+        });
+      }
     } catch {
       setError('Не вдалося отримати прогноз. Спробуйте пізніше.');
     } finally {
@@ -188,7 +199,12 @@ export default function DailyMatrixScreen() {
 
           {!loading && error === '' && forecast !== '' && (
             <>
-              <Text style={styles.forecastText}>{forecast}</Text>
+              <MarkdownText
+                text={forecast}
+                color={Colors.text}
+                fontSize={FontSize.md}
+                lineHeight={24}
+              />
               <TouchableOpacity onPress={generateForecast} style={styles.refreshRow}>
                 <Ionicons name="refresh-outline" size={14} color={Colors.textMuted} />
                 <Text style={styles.refreshText}>Оновити прогноз</Text>

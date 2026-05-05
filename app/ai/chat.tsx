@@ -18,8 +18,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { useAppStore, ChatMessage, AIChatSession } from '../../stores/useAppStore';
+
+/** Derive a short session title from the daily context string or user's first message */
+function deriveTitleFromContext(ctx: string): string {
+  if (!ctx) return 'AI Консультація';
+  const c = ctx.trim();
+  if (c.includes('Розклад "Так чи Ні"')) return 'Так чи Ні — розклад';
+  if (c.includes('Розклад "')) {
+    const m = c.match(/Розклад "([^"]+)"/);
+    if (m) return `Розклад: ${m[1]}`;
+  }
+  if (c.includes('Прогноз Таро')) return 'Прогноз Таро';
+  if (c.includes('Матриця Дня')) return 'Матриця Дня';
+  if (c.includes('Матриця')) return 'Аналіз Матриці';
+  if (c.includes('Таро')) return 'Консультація Таро';
+  return c.slice(0, 40).replace(/\n/g, ' ').trim();
+}
 import { askClaude, type ClaudeMessage } from '../../lib/claude';
 import { getDailyEnergy } from '../../lib/matrix-calc';
+import { MarkdownText } from '../../components/ui/MarkdownText';
 
 function buildSystemPrompt(userName: string | null, userBirthDate: string | null, matrixSummary: string, dailyMatrixCtx?: string): string {
   const dailyEnergy = getDailyEnergy();
@@ -33,31 +50,13 @@ ${matrixSummary ? `\nМатриця долі:\n${matrixSummary}` : ''}${dailyMat
 
 Правила:
 - Відповідайте тепло, духовно та персоналізовано
-- Використовуйте символи (✨ 💜 🔮 🌟 🃏) помірно
+- НЕ використовуйте смайлики та емодзі у відповідях
 - Якщо є дані матриці — спирайтесь на них у відповіді
 - Відповідайте мовою питання (українська або англійська)
 - Будьте конкретними та практичними, не лише поетичними
 - НЕ використовуйте markdown розмітку (**жирний**, *курсив*) — пишіть звичайним текстом
-- Якщо питання не стосується езотерики — делікатно поверніться до теми`;
-}
-
-// Renders text with **bold** markdown parsed into bold Text spans
-function FormattedText({ text, style }: { text: string; style?: object }) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <Text style={style}>
-      {parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return (
-            <Text key={i} style={{ fontWeight: '700' }}>
-              {part.slice(2, -2)}
-            </Text>
-          );
-        }
-        return <Text key={i}>{part}</Text>;
-      })}
-    </Text>
-  );
+- Якщо питання не стосується езотерики — делікатно поверніться до теми
+- Дата народження та ім'я користувача вже є в системному промпті — НЕ ПИТАЙ їх у користувача повторно`;
 }
 
 const QUICK_QUESTIONS = [
@@ -78,6 +77,7 @@ export default function AIChatScreen() {
   const isPremium = useAppStore((s) => s.isPremium);
   const addChatSession = useAppStore((s) => s.addChatSession);
   const addMessageToSession = useAppStore((s) => s.addMessageToSession);
+  const updateSessionTitle = useAppStore((s) => s.updateSessionTitle);
   const activeSessionId = useAppStore((s) => s.activeSessionId);
   const chatSessions = useAppStore((s) => s.chatSessions);
   const setActiveSession = useAppStore((s) => s.setActiveSession);
@@ -107,10 +107,13 @@ export default function AIChatScreen() {
       setActiveSession(paramSessionId);
     } else {
       // Always start a new session on fresh entry
+      const sessionTitle = dailyContext
+        ? deriveTitleFromContext(dailyContext)
+        : 'AI Консультація';
       const newSession: AIChatSession = {
         id: Date.now().toString(),
-        title: 'AI Консультація',
-        context: 'general',
+        title: sessionTitle,
+        context: dailyContext?.includes('Таро') ? 'tarot' : 'general',
         messages: [
           {
             id: '0',
@@ -164,6 +167,16 @@ export default function AIChatScreen() {
         createdAt: new Date().toISOString(),
       };
       addMessageToSession(sessionId, aiMsg);
+
+      // Auto-generate title from first user message if still generic
+      const session = useAppStore.getState().chatSessions.find((s) => s.id === sessionId);
+      if (session && session.title === 'AI Консультація') {
+        const firstUserMsg = session.messages.find((m) => m.role === 'user');
+        if (firstUserMsg) {
+          const autoTitle = firstUserMsg.content.slice(0, 45).replace(/\n/g, ' ').trim();
+          updateSessionTitle(sessionId, autoTitle.length > 0 ? autoTitle : 'AI Консультація');
+        }
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Невідома помилка';
       Alert.alert('Помилка AI', errMsg, [{ text: 'OK' }]);
@@ -243,13 +256,16 @@ export default function AIChatScreen() {
                   msg.role === 'user' ? styles.userContent : styles.aiContent,
                 ]}
               >
-                <FormattedText
-                  text={msg.content}
-                  style={[
-                    styles.bubbleText,
-                    msg.role === 'user' ? styles.userText : styles.aiText,
-                  ]}
-                />
+                {msg.role === 'user' ? (
+                  <Text style={[styles.bubbleText, styles.userText]}>{msg.content}</Text>
+                ) : (
+                  <MarkdownText
+                    text={msg.content}
+                    color={Colors.text}
+                    fontSize={FontSize.md}
+                    lineHeight={20}
+                  />
+                )}
               </View>
             </View>
           ))}

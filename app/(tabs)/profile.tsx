@@ -16,6 +16,7 @@ import { Card } from '../../components/ui/Card';
 import { useAppStore } from '../../stores/useAppStore';
 import { supabase } from '../../lib/supabase';
 
+
 const { width } = Dimensions.get('window');
 const XP_PER_LEVEL = 500;
 
@@ -40,17 +41,14 @@ export default function ProfileScreen() {
   const SETTINGS = [
     { icon: 'trophy-outline' as const, label: 'Досягнення та нагороди', badge: `${unlockedIds.length}`, route: '/profile/achievements' },
     { icon: 'diamond-outline' as const, label: 'Кристали та Premium', badge: `${tokens}`, route: '/paywall' },
-    { icon: 'gift-outline' as const, label: 'Реферальна програма', badge: null, route: '/matrix/referral' },
-    { icon: 'headset-outline' as const, label: 'Медитації', badge: null, route: '/meditation' },
+    { icon: 'time-outline' as const, label: 'Історія', badge: null, route: '/profile/history' },
   ];
 
   const APP_SETTINGS = [
-    { icon: 'notifications-outline' as const, label: 'Сповіщення', badge: unreadCount > 0 ? `${unreadCount}` : null, route: null },
-    { icon: 'person-outline' as const, label: 'Акаунт', badge: null, route: null },
-    { icon: 'language-outline' as const, label: 'Мова', badge: null, route: null },
-    { icon: 'shield-outline' as const, label: 'Конфіденційність', badge: null, route: null },
-    { icon: 'help-circle-outline' as const, label: 'Допомога', badge: null, route: null },
-    { icon: 'information-circle-outline' as const, label: 'Про додаток', badge: null, route: null },
+    { icon: 'notifications-outline' as const, label: 'Сповіщення', badge: unreadCount > 0 ? `${unreadCount}` : null, route: '/profile/notifications' },
+    { icon: 'person-outline' as const, label: 'Акаунт', badge: null, route: '/profile/account' },
+    { icon: 'language-outline' as const, label: 'Мова', badge: null, route: '/profile/language' },
+    { icon: 'information-circle-outline' as const, label: 'Про додаток', badge: null, route: '/profile/about' },
   ];
 
   return (
@@ -60,9 +58,11 @@ export default function ProfileScreen() {
       <LinearGradient colors={['#1E1B4B', '#312E81']} style={styles.hero}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {userName ? userName[0].toUpperCase() : '✨'}
-            </Text>
+            {userName ? (
+              <Text style={styles.avatarLetter}>{userName[0].toUpperCase()}</Text>
+            ) : (
+              <Ionicons name="person-outline" size={32} color={Colors.primaryLight} />
+            )}
           </View>
           {isPremium && (
             <View style={styles.premiumAvatarBadge}>
@@ -242,6 +242,7 @@ const styles = StyleSheet.create({
 
   hero: {
     padding: Spacing.xl,
+    paddingTop: 56,
     alignItems: 'center',
     gap: Spacing.md,
     paddingBottom: Spacing.xl,

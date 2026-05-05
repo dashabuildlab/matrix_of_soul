@@ -47,6 +47,21 @@ export interface TarotSpread {
   createdAt: string;
 }
 
+export interface DayCardEntry {
+  date: string;       // YYYY-MM-DD
+  cardId: number;
+  cardName: string;
+  cardMeaning: string;
+  keywords: string[];
+}
+
+export interface DayMatrixEntry {
+  date: string;       // YYYY-MM-DD
+  summary: string;
+  energyId: number;
+  energyName: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -74,15 +89,14 @@ export interface Achievement {
 }
 
 const ALL_ACHIEVEMENTS: Achievement[] = [
-  { id: 'first_matrix', title: 'Перший крок', description: 'Створіть свою першу матрицю', icon: '🌟', xp: 50 },
-  { id: 'first_tarot', title: 'Оракул', description: 'Зробіть перший розклад Таро', icon: '🃏', xp: 30 },
-  { id: 'streak_3', title: '3 дні поспіль', description: 'Відвідайте додаток 3 дні підряд', icon: '🔥', xp: 100 },
-  { id: 'streak_7', title: 'Тиждень практики', description: 'Відвідайте додаток 7 днів підряд', icon: '💎', xp: 250 },
-  { id: 'streak_30', title: 'Місяць мудрості', description: 'Відвідайте додаток 30 днів підряд', icon: '👑', xp: 1000 },
-  { id: 'first_ai', title: 'Діалог з Всесвітом', description: 'Поставте перше питання AI', icon: '🤖', xp: 40 },
-  { id: 'quiz_master', title: 'Майстер Таро', description: 'Пройдіть вікторину з результатом 100%', icon: '🎯', xp: 200 },
-  { id: 'invite_1', title: 'Перший реферал', description: 'Запросіть першого друга', icon: '🤝', xp: 150 },
-  { id: 'meditation_5', title: 'Медитатор', description: 'Прослухайте 5 медитацій', icon: '🧘', xp: 100 },
+  { id: 'first_matrix', title: 'Перший крок', description: 'Створіть свою першу матрицю', icon: 'star', xp: 50 },
+  { id: 'first_tarot', title: 'Оракул', description: 'Зробіть перший розклад Таро', icon: 'layers-outline', xp: 30 },
+  { id: 'streak_3', title: '3 дні поспіль', description: 'Відвідайте додаток 3 дні підряд', icon: 'flame', xp: 100 },
+  { id: 'streak_7', title: 'Тиждень практики', description: 'Відвідайте додаток 7 днів підряд', icon: 'diamond', xp: 250 },
+  { id: 'streak_30', title: 'Місяць мудрості', description: 'Відвідайте додаток 30 днів підряд', icon: 'ribbon', xp: 1000 },
+  { id: 'first_ai', title: 'Діалог з Всесвітом', description: 'Поставте перше питання AI', icon: 'sparkles-outline', xp: 40 },
+  { id: 'quiz_master', title: 'Майстер Таро', description: 'Пройдіть вікторину з результатом 100%', icon: 'checkmark-circle-outline', xp: 200 },
+  { id: 'meditation_5', title: 'Медитатор', description: 'Прослухайте 5 медитацій', icon: 'leaf-outline', xp: 100 },
 ];
 
 interface AppState {
@@ -106,10 +120,17 @@ interface AppState {
   tarotSpreads: TarotSpread[];
   addTarotSpread: (spread: TarotSpread) => void;
 
+  // Daily card & matrix history (shown in profile)
+  dayCardHistory: DayCardEntry[];
+  addDayCardEntry: (entry: DayCardEntry) => void;
+  dayMatrixHistory: DayMatrixEntry[];
+  addDayMatrixEntry: (entry: DayMatrixEntry) => void;
+
   // AI chat sessions
   chatSessions: AIChatSession[];
   addChatSession: (session: AIChatSession) => void;
   addMessageToSession: (sessionId: string, message: ChatMessage) => void;
+  updateSessionTitle: (sessionId: string, title: string) => void;
   getCurrentSession: () => AIChatSession | null;
   activeSessionId: string | null;
   setActiveSession: (id: string | null) => void;
@@ -149,12 +170,6 @@ interface AppState {
   premiumPlan: 'yearly' | 'monthly' | 'weekly' | null;
   setPremium: (val: boolean, plan?: 'yearly' | 'monthly' | 'weekly') => void;
 
-  // Referral
-  referralCode: string | null;
-  referralCount: number;
-  setReferralCode: (code: string) => void;
-  incrementReferral: () => void;
-
   // Onboarding
   onboardingCompleted: boolean;
   setOnboardingCompleted: () => void;
@@ -181,6 +196,10 @@ interface AppState {
   // AI consent
   aiConsentGiven: boolean;
   setAiConsentGiven: () => void;
+
+  // Per-matrix AI analysis cache (keyed by matrix ID)
+  matrixAnalyses: Record<string, string>;
+  setMatrixAnalysis: (id: string, text: string) => void;
 
   // Daily matrix AI cache (keyed by date string "YYYY-MM-DD")
   dailyMatrixCache: Record<string, string>;
@@ -254,6 +273,19 @@ export const useAppStore = create<AppState>()(
   addTarotSpread: (spread) =>
     set((state) => ({ tarotSpreads: [spread, ...state.tarotSpreads] })),
 
+  dayCardHistory: [],
+  addDayCardEntry: (entry) =>
+    set((state) => {
+      if (state.dayCardHistory.some((e) => e.date === entry.date)) return {};
+      return { dayCardHistory: [entry, ...state.dayCardHistory].slice(0, 60) };
+    }),
+  dayMatrixHistory: [],
+  addDayMatrixEntry: (entry) =>
+    set((state) => {
+      if (state.dayMatrixHistory.some((e) => e.date === entry.date)) return {};
+      return { dayMatrixHistory: [entry, ...state.dayMatrixHistory].slice(0, 60) };
+    }),
+
   chatSessions: [],
   activeSessionId: null,
   addChatSession: (session) =>
@@ -267,6 +299,12 @@ export const useAppStore = create<AppState>()(
         s.id === sessionId
           ? { ...s, messages: [...s.messages, message] }
           : s
+      ),
+    })),
+  updateSessionTitle: (sessionId, title) =>
+    set((state) => ({
+      chatSessions: state.chatSessions.map((s) =>
+        s.id === sessionId ? { ...s, title } : s
       ),
     })),
   getCurrentSession: () => {
@@ -337,12 +375,6 @@ export const useAppStore = create<AppState>()(
   premiumPlan: null,
   setPremium: (val, plan = undefined) =>
     set({ isPremium: val, premiumPlan: plan ?? null }),
-
-  referralCode: null,
-  referralCount: 0,
-  setReferralCode: (code) => set({ referralCode: code }),
-  incrementReferral: () =>
-    set((state) => ({ referralCount: state.referralCount + 1 })),
 
   onboardingCompleted: false,
   setOnboardingCompleted: () => set({ onboardingCompleted: true }),
@@ -428,7 +460,6 @@ export const useAppStore = create<AppState>()(
     if (state.streak >= 3) tryUnlock('streak_3');
     if (state.streak >= 7) tryUnlock('streak_7');
     if (state.streak >= 30) tryUnlock('streak_30');
-    if (state.referralCount >= 1) tryUnlock('invite_1');
     if (state.meditationCount >= 5) tryUnlock('meditation_5');
 
     return newlyUnlocked;
@@ -458,6 +489,13 @@ export const useAppStore = create<AppState>()(
   // AI consent
   aiConsentGiven: false,
   setAiConsentGiven: () => set({ aiConsentGiven: true }),
+
+  // Per-matrix AI analysis cache
+  matrixAnalyses: {},
+  setMatrixAnalysis: (id, text) =>
+    set((state) => ({
+      matrixAnalyses: { ...state.matrixAnalyses, [id]: text },
+    })),
 
   // Daily matrix AI cache
   dailyMatrixCache: {},
@@ -533,13 +571,13 @@ export const useAppStore = create<AppState>()(
         knowledgeLevel: state.knowledgeLevel,
         savedMatrices: state.savedMatrices,
         tarotSpreads: state.tarotSpreads,
+        dayCardHistory: state.dayCardHistory,
+        dayMatrixHistory: state.dayMatrixHistory,
         chatSessions: state.chatSessions,
         activeSessionId: state.activeSessionId,
         tokens: state.tokens,
         isPremium: state.isPremium,
         premiumPlan: state.premiumPlan,
-        referralCode: state.referralCode,
-        referralCount: state.referralCount,
         onboardingCompleted: state.onboardingCompleted,
         xp: state.xp,
         level: state.level,
@@ -551,6 +589,7 @@ export const useAppStore = create<AppState>()(
         notifications: state.notifications,
         pendingAnalysis: state.pendingAnalysis,
         aiConsentGiven: state.aiConsentGiven,
+        matrixAnalyses: state.matrixAnalyses,
         dailyMatrixCache: state.dailyMatrixCache,
         destinyMatrix: state.destinyMatrix,
         destinyMatrixAiSummary: state.destinyMatrixAiSummary,
