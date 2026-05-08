@@ -16,11 +16,12 @@ import { EnergyBadge } from '../../components/ui/EnergyBadge';
 import { getDailyEnergy, calculateMatrix } from '../../lib/matrix-calc';
 import { getEnergyById } from '../../constants/energies';
 import { askClaude } from '../../lib/claude';
+import { useI18n } from '../../lib/i18n';
 import { useAppStore } from '../../stores/useAppStore';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 
 const SYSTEM_PROMPT =
-  'Ти — езотеричний аналітик Матриці Долі. Напиши прогноз рівно 5 речень: перші 4 — персональний прогноз на день на основі 4 енергій (тепло, натхненно, практично), 5-е речення обов\'язково порівнює енергії дня з матрицею долі користувача і нативно підштовхує до її генерації (наприклад: "Щоб дізнатись як ці енергії резонують із вашою особистою Матрицею Долі — згенеруйте її прямо зараз"). Мова — українська. Без вступів, підписів, нумерації та зайвих переносів рядка.';
+  'You are an esoteric analyst of the Destiny Matrix. Write a forecast of exactly 5 sentences: the first 4 are a personal daily forecast based on 4 energies (warm, inspiring, practical), the 5th sentence must compare the day\'s energies with the user\'s destiny matrix and naturally encourage them to generate it (e.g.: "To learn how these energies resonate with your personal Destiny Matrix — generate it right now"). No intros, signatures, numbering, or extra line breaks.';
 
 const GRID_POSITIONS = [
   { label: 'Загальна', key: 'personality' as const },
@@ -30,6 +31,7 @@ const GRID_POSITIONS = [
 ];
 
 export default function DailyMatrixScreen() {
+  const { locale } = useI18n();
   const isPremium           = useAppStore((s) => s.isPremium);
   const dailyMatrixCache    = useAppStore((s) => s.dailyMatrixCache);
   const setDailyMatrixCache = useAppStore((s) => s.setDailyMatrixCache);
@@ -95,14 +97,15 @@ export default function DailyMatrixScreen() {
       if (personalMatrix) {
         const persEnergy = getEnergyById(personalMatrix.personality);
         const soulEnergy = getEnergyById(personalMatrix.soul);
-        personalContext = `\n\nОсобиста матриця долі користувача: Особистість=${personalMatrix.personality} "${persEnergy?.name}", Душа=${personalMatrix.soul} "${soulEnergy?.name}". Додай в кінці прогнозу одне речення порівняння енергій сьогодні з особистою матрицею долі — наприклад "Сьогоднішня енергія Дня особливо резонує з вашою природою [пояснення]" або "Порівняно з вашою матрицею долі, сьогодні..."`;
+        personalContext = `\n\nUser's personal destiny matrix: Personality=${personalMatrix.personality} "${persEnergy?.name}", Soul=${personalMatrix.soul} "${soulEnergy?.name}". At the end of the forecast, add one sentence comparing today's energies with the personal destiny matrix — e.g. "Today's Day energy especially resonates with your nature [explanation]" or "Compared to your destiny matrix, today..."`;
       }
 
       const result = await askClaude(
         SYSTEM_PROMPT,
         [],
-        `Дата: ${dateLabel}\n\nЕнергії дня:\n${descriptions}${personalContext}\n\nСкладіть натхненний прогноз на день.`,
+        `Date: ${dateLabel}\n\nDaily energies:\n${descriptions}${personalContext}\n\nWrite an inspiring forecast for the day.`,
         1200,
+        locale,
       );
 
       setForecast(result);

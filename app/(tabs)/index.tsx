@@ -28,6 +28,7 @@ import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
 import { GIFT_DIAMONDS } from '../../lib/notifications';
 import { askClaude } from '../../lib/claude';
+import { useI18n } from '../../lib/i18n';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -150,6 +151,7 @@ const cardStyles = StyleSheet.create({
 
 export default function TodayScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
   const today = new Date();
   const todayDate = today.toISOString().split('T')[0];
   const dailyEnergy = getDailyEnergy(today);
@@ -250,15 +252,16 @@ export default function TodayScreen() {
         : '';
 
       const result = await askClaude(
-        'Ти — AI Езотерик у застосунку "Matrix of Soul". Відповідай ТІЛЬКИ українською. Коротко, 3-4 речення.',
+        'You are an AI Esoteric guide in the Matrix of Soul app. Keep it brief — 3-4 sentences.',
         [],
-        `Енергія дня: ${dailyEnergy}. ${energy?.name ?? ''}.
-Матриця дня: Загальна=${dailyMatrix?.personality}, Емоції=${dailyMatrix?.soul}, Дії=${dailyMatrix?.destiny}, Духовне=${dailyMatrix?.spiritual}.
+        `Daily energy: ${dailyEnergy}. ${energy?.name ?? ''}.
+Daily matrix: General=${dailyMatrix?.personality}, Emotions=${dailyMatrix?.soul}, Actions=${dailyMatrix?.destiny}, Spiritual=${dailyMatrix?.spiritual}.
 ${personalData}
-${userName ? `Ім'я: ${userName}.` : ''}
+${userName ? `Name: ${userName}.` : ''}
 
-Напиши підсумок матриці дня (3-4 речення). ${destinyMatrix ? 'Обов\'язково порівняй з матрицею долі користувача.' : 'Останнє речення: "Згенеруйте свою Матрицю долі, щоб побачити персональний резонанс."'} Без заголовків, без списків.`,
+Write a summary of the daily matrix (3-4 sentences). ${destinyMatrix ? 'Always compare with the user\'s destiny matrix.' : 'End with: "Generate your Destiny Matrix to see your personal resonance."'} No headings, no lists.`,
         800,
+        locale,
       );
       setModalSummary(result);
       setDailyMatrixCache(MODAL_CACHE_KEY, result);

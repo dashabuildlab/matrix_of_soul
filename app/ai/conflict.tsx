@@ -17,6 +17,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAppStore } from '../../stores/useAppStore';
 import { askClaude } from '../../lib/claude';
+import { useI18n } from '../../lib/i18n';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 
 type Step = 1 | 2 | 3 | 4 | 'result';
@@ -59,7 +60,7 @@ interface ConflictResult {
   mainAdvice: string;
 }
 
-async function analyzeConflictWithAI(data: ConflictData): Promise<ConflictResult> {
+async function analyzeConflictWithAI(data: ConflictData, locale: string): Promise<ConflictResult> {
   const systemPrompt = `Ви — AI психолог та езотерик застосунку Matrix of Soul. Ви аналізуєте міжособистісні конфлікти глибоко, персоналізовано та практично. Відповідайте структуровано, з конкретними порадами.`;
 
   const participantsDesc = data.personRoles
@@ -88,7 +89,7 @@ ${participantsDesc}
   "mainAdvice": "головне послання та наступний крок"
 }`;
 
-  const raw = await askClaude(systemPrompt, [], userPrompt, 2000);
+  const raw = await askClaude(systemPrompt, [], userPrompt, 2000, locale);
 
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -107,6 +108,7 @@ ${participantsDesc}
 
 export default function ConflictScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ConflictResult | null>(null);
@@ -146,7 +148,7 @@ export default function ConflictScreen() {
 
     try {
       setLoading(true);
-      const analysisResult = await analyzeConflictWithAI(data);
+      const analysisResult = await analyzeConflictWithAI(data, locale);
       setResult(analysisResult);
       setStep('result');
     } catch (err) {

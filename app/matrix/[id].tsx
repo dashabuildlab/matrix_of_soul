@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { getEnergyById } from '../../constants/energies';
 import { askClaude } from '../../lib/claude';
+import { useI18n } from '../../lib/i18n';
 import { useAppStore } from '../../stores/useAppStore';
 import { MatrixDiagram } from '../../components/matrix/MatrixDiagram';
 import { type MatrixData } from '../../lib/matrix-calc';
@@ -102,6 +103,7 @@ function parseAnalysis(raw: string): Array<{ title: string; text: string }> {
 
 export default function MatrixDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { locale } = useI18n();
   const destinyMatrix    = useAppStore((s) => s.destinyMatrix);
   const savedMatrices    = useAppStore((s) => s.savedMatrices);
   const matrixAnalyses   = useAppStore((s) => s.matrixAnalyses);
@@ -123,10 +125,11 @@ export default function MatrixDetailScreen() {
     if (!matrix || analysisRaw || analysisLoading) return;
     setAnalysisLoading(true);
     askClaude(
-      'Ти — езотеричний аналітик матриці долі. Відповідай тільки українською.',
+      'You are an esoteric analyst of the destiny matrix.',
       [],
       buildPrompt(matrix.data),
       1800,
+      locale,
     )
       .then((text) => {
         setMatrixAnalysis(matrix.id, text);

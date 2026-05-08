@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, Text, Animated, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Colors } from '../constants/theme';
 import { initializePurchases } from '../lib/purchases';
@@ -10,22 +11,10 @@ import { supabase } from '../lib/supabase';
 import { initializeNotifications } from '../lib/notifications';
 import { useAppStore, Achievement } from '../stores/useAppStore';
 import type { Session } from '@supabase/supabase-js';
-
-// Daily affirmations shown in-app on first visit each day
-const DAILY_AFFIRMATIONS = [
-  'Ти сповнений сили та мудрості для цього дня',
-  'Всесвіт підтримує твій шлях',
-  'Твої таланти унікальні та потрібні світу',
-  'Кожен день — це нова можливість для росту',
-  'Любов та достаток течуть у твоє життя',
-  'Ти достатній саме таким, яким є',
-  'Твоя інтуїція — найнадійніший провідник',
-  'Всі твої мрії стають реальністю крок за кроком',
-  'Ти захищений та спрямований вищою силою',
-  'Сьогодні відкрий щось нове в собі',
-];
+import { I18nProvider, useI18n } from '../lib/i18n';
 
 function AchievementToast({ achievement, onHide }: { achievement: Achievement; onHide: () => void }) {
+  const { t } = useI18n();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-80)).current;
 
@@ -58,7 +47,7 @@ function AchievementToast({ achievement, onHide }: { achievement: Achievement; o
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: Colors.accent, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>
-          Нова нагорода
+          {t.layout.newReward}
         </Text>
         <Text style={{ color: '#1A0A35', fontSize: 15, fontWeight: '700' }}>{achievement.title}</Text>
         <Text style={{ color: '#9B87C0', fontSize: 12 }}>{achievement.description} · +{achievement.xp} XP</Text>
@@ -71,6 +60,7 @@ function AchievementToast({ achievement, onHide }: { achievement: Achievement; o
 }
 
 function StreakToast({ streak, onHide }: { streak: number; onHide: () => void }) {
+  const { t } = useI18n();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
 
@@ -100,18 +90,20 @@ function StreakToast({ streak, onHide }: { streak: number; onHide: () => void })
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{ color: '#F97316', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>
-          Серія оновлена
+          {t.layout.streakUpdated}
         </Text>
         <Text style={{ color: '#1A0A35', fontSize: 16, fontWeight: '700' }}>
-          {streak} {streak === 1 ? 'день' : streak < 5 ? 'дні' : 'днів'} поспіль
+          {t.layout.daysInRow(streak)}
         </Text>
-        <Text style={{ color: '#9B87C0', fontSize: 12 }}>+20 XP за щоденний вхід</Text>
+        <Text style={{ color: '#9B87C0', fontSize: 12 }}>{t.layout.xpForDailyLogin}</Text>
       </View>
     </Animated.View>
   );
 }
 
-export default function RootLayout() {
+// Inner component — has access to I18nProvider context
+function AppInit() {
+  const { t } = useI18n();
   const [session, setSession] = useState<Session | null>(null);
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,8 +123,10 @@ export default function RootLayout() {
       // Clear expired push gifts from previous days
       useAppStore.getState().clearExpiredGifts();
 
-      // Initialize push notifications (schedule daily gift / engagement push)
-      initializeNotifications('uk').catch(() => {});
+      // Read stored locale for notifications — I18nProvider also reads it asynchronously,
+      // but we need it synchronously here for push notification scheduling
+      const storedLocale = (await AsyncStorage.getItem('app_language')) ?? 'en';
+      initializeNotifications(storedLocale).catch(() => {});
 
       try {
         const val = await SecureStore.getItemAsync('onboarding_done');
@@ -152,24 +146,24 @@ export default function RootLayout() {
           const result = checkAndUpdateStreak();
           if (result.isNewDay) {
             if (!result.streakBroken && result.newStreak > 1) {
-              const t = setTimeout(() => setStreakToast(result.newStreak), 800);
-              timers.push(t);
+              const streakTimer = setTimeout(() => setStreakToast(result.newStreak), 800);
+              timers.push(streakTimer);
             }
             // Show all unlocked achievements sequentially with 3s gap
             const delay = result.newStreak > 1 ? 4500 : 800;
-            const t = setTimeout(() => {
+            const achTimer = setTimeout(() => {
               const newAchievements = checkAchievements();
               newAchievements.forEach((ach, idx) => {
                 const at = setTimeout(() => setAchievementToast(ach), idx * 3000);
                 timers.push(at);
               });
             }, delay);
-            timers.push(t);
+            timers.push(achTimer);
 
-            const affirmation = DAILY_AFFIRMATIONS[new Date().getDay() % DAILY_AFFIRMATIONS.length];
+            const affirmation = t.affirmations[new Date().getDay() % t.affirmations.length];
             addNotification({
               id: `affirmation_${Date.now()}`,
-              title: 'Афірмація дня',
+              title: t.screens.affirmationOfDay,
               body: affirmation,
               type: 'affirmation',
               read: false,
@@ -248,40 +242,43 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} redirect={!session && !storeAuthenticated} />
 
         {/* Matrix */}
-        <Stack.Screen name="matrix/create" options={{ title: 'Створити Матрицю', presentation: 'modal' }} />
-        <Stack.Screen name="matrix/[id]" options={{ title: 'Матриця' }} />
-        <Stack.Screen name="matrix/compatibility" options={{ title: 'Сумісність', presentation: 'modal' }} />
-        <Stack.Screen name="matrix/daily" options={{ title: 'Матриця Дня' }} />
-        <Stack.Screen name="matrix/referral" options={{ title: 'Реферальна програма' }} />
-        <Stack.Screen name="matrix/analysis" options={{ title: 'Аналіз Матриці' }} />
+        <Stack.Screen name="matrix/create" options={{ title: '', presentation: 'modal' }} />
+        <Stack.Screen name="matrix/[id]" options={{ title: '' }} />
+        <Stack.Screen name="matrix/compatibility" options={{ title: '', presentation: 'modal' }} />
+        <Stack.Screen name="matrix/daily" options={{ title: '' }} />
+        <Stack.Screen name="matrix/analysis" options={{ title: '' }} />
 
         {/* Tarot */}
-        <Stack.Screen name="tarot/spread" options={{ title: 'Розклад Таро', presentation: 'modal' }} />
-        <Stack.Screen name="tarot/history" options={{ title: 'Історія Розкладів' }} />
-        <Stack.Screen name="tarot/yesno" options={{ title: 'Так чи Ні', presentation: 'modal' }} />
-        <Stack.Screen name="tarot/person" options={{ title: 'Розклад на Людину', presentation: 'modal' }} />
-        <Stack.Screen name="tarot/period" options={{ title: 'Прогноз Таро', presentation: 'modal' }} />
+        <Stack.Screen name="tarot/spread" options={{ title: '', presentation: 'modal' }} />
+        <Stack.Screen name="tarot/history" options={{ title: '' }} />
+        <Stack.Screen name="tarot/yesno" options={{ title: '', presentation: 'modal' }} />
+        <Stack.Screen name="tarot/person" options={{ title: '', presentation: 'modal' }} />
+        <Stack.Screen name="tarot/period" options={{ title: '', presentation: 'modal' }} />
+
         {/* AI */}
         <Stack.Screen name="ai/disclosure" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="ai/chat" options={{ headerShown: false }} />
-        <Stack.Screen name="ai/conflict" options={{ title: 'Аналіз Конфлікту', presentation: 'modal' }} />
+        <Stack.Screen name="ai/conflict" options={{ headerShown: false, presentation: 'modal' }} />
 
         {/* Learn */}
-        <Stack.Screen name="learn/tarot" options={{ title: 'Вивчення Таро' }} />
-        <Stack.Screen name="learn/signs" options={{ title: 'Знаки Зодіаку' }} />
-        <Stack.Screen name="learn/planets" options={{ title: 'Планети' }} />
-        <Stack.Screen name="learn/chakras" options={{ title: 'Чакри' }} />
+        <Stack.Screen name="learn/tarot" options={{ headerShown: false }} />
+        <Stack.Screen name="learn/signs" options={{ title: '' }} />
+        <Stack.Screen name="learn/planets" options={{ title: '' }} />
+        <Stack.Screen name="learn/chakras" options={{ title: '' }} />
 
         {/* Profile */}
-        <Stack.Screen name="profile/achievements" options={{ title: 'Досягнення та нагороди' }} />
-        <Stack.Screen name="profile/account" options={{ title: 'Редагувати профіль' }} />
+        <Stack.Screen name="profile/achievements" options={{ title: '' }} />
+        <Stack.Screen name="profile/account" options={{ title: '' }} />
+        <Stack.Screen name="profile/history" options={{ title: '' }} />
+        <Stack.Screen name="profile/notifications" options={{ title: '' }} />
+        <Stack.Screen name="profile/language" options={{ title: '' }} />
         <Stack.Screen name="profile/about" options={{ headerShown: false }} />
 
         {/* Utility */}
         <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
-        <Stack.Screen name="meditation" options={{ title: 'Медитації' }} />
+        <Stack.Screen name="meditation" options={{ title: '' }} />
         <Stack.Screen name="meditation/player" options={{ headerShown: false }} />
-        <Stack.Screen name="share" options={{ title: 'Поділитись', presentation: 'modal' }} />
+        <Stack.Screen name="share" options={{ title: '', presentation: 'modal' }} />
 
       </Stack>
 
@@ -292,5 +289,14 @@ export default function RootLayout() {
         <StreakToast streak={streakToast} onHide={() => setStreakToast(null)} />
       )}
     </>
+  );
+}
+
+// Root layout — wraps everything in I18nProvider so all screens have access to translations
+export default function RootLayout() {
+  return (
+    <I18nProvider>
+      <AppInit />
+    </I18nProvider>
   );
 }

@@ -19,6 +19,7 @@ import { MatrixDiagram } from '../../components/matrix/MatrixDiagram';
 import { calculateMatrix } from '../../lib/matrix-calc';
 import { getEnergyById } from '../../constants/energies';
 import { askClaude } from '../../lib/claude';
+import { useI18n } from '../../lib/i18n';
 import { useAppStore } from '../../stores/useAppStore';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 
@@ -29,6 +30,7 @@ const DEMO_DATE = '1990-06-15';
 
 export default function MatrixScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
 
   const isPremium        = useAppStore((s) => s.isPremium);
   const userBirthDate    = useAppStore((s) => s.userBirthDate);
@@ -69,10 +71,11 @@ export default function MatrixScreen() {
       const s = getEnergyById(previewMatrix.soul);
       const d = getEnergyById(previewMatrix.destiny);
       askClaude(
-        'Ти — езотеричний аналітик. Пиши теплою, мотивуючою мовою українською. Без markdown розмітки.',
+        'You are an esoteric analyst. Write warmly, in a motivating tone, without markdown formatting.',
         [],
-        `Особистість: ${previewMatrix.personality} "${p?.name}" — ${p?.positive}\nДуша: ${previewMatrix.soul} "${s?.name}" — ${s?.positive}\nДоля: ${previewMatrix.destiny} "${d?.name}" — ${d?.positive}\n\nНапиши загальний підсумок матриці долі в 3-4 речення: хто ця людина, в чому її сила, яке її призначення.`,
+        `Personality: ${previewMatrix.personality} "${p?.name}" — ${p?.positive}\nSoul: ${previewMatrix.soul} "${s?.name}" — ${s?.positive}\nDestiny: ${previewMatrix.destiny} "${d?.name}" — ${d?.positive}\n\nWrite a general summary of the destiny matrix in 3-4 sentences: who this person is, what their strength is, what their purpose is.`,
         300,
+        locale,
       ).then(setAiSummary).catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,10 +124,11 @@ export default function MatrixScreen() {
       const s = getEnergyById(matrix.soul);
       const d = getEnergyById(matrix.destiny);
       const result = await askClaude(
-        'Ти — езотеричний аналітик. Пиши теплою, мотивуючою мовою українською. Без markdown розмітки.',
+        'You are an esoteric analyst. Write warmly, in a motivating tone, without markdown formatting.',
         [],
-        `Особистість: ${matrix.personality} "${p?.name}" — ${p?.positive}\nДуша: ${matrix.soul} "${s?.name}" — ${s?.positive}\nДоля: ${matrix.destiny} "${d?.name}" — ${d?.positive}\n\nНапиши загальний підсумок матриці долі в 3-4 речення: хто ця людина, в чому її сила, яке її призначення.`,
+        `Personality: ${matrix.personality} "${p?.name}" — ${p?.positive}\nSoul: ${matrix.soul} "${s?.name}" — ${s?.positive}\nDestiny: ${matrix.destiny} "${d?.name}" — ${d?.positive}\n\nWrite a general summary of the destiny matrix in 3-4 sentences: who this person is, what their strength is, what their purpose is.`,
         300,
+        locale,
       );
       setAiSummary(result);
     } catch { /* silent */ }

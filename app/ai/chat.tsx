@@ -36,6 +36,8 @@ function deriveTitleFromContext(ctx: string): string {
 }
 import { askClaude, type ClaudeMessage } from '../../lib/claude';
 import { getDailyEnergy } from '../../lib/matrix-calc';
+import { useI18n } from '../../lib/i18n';
+import { getAIFallbackMessage, getAIErrorTitle, getDefaultSessionTitle, getAIWelcomeMessage } from '../../lib/aiLocale';
 import { MarkdownText } from '../../components/ui/MarkdownText';
 
 function buildSystemPrompt(userName: string | null, userBirthDate: string | null, matrixSummary: string, dailyMatrixCtx?: string): string {
@@ -69,6 +71,7 @@ const QUICK_QUESTIONS = [
 
 export default function AIChatScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
   const { sessionId: paramSessionId, dailyContext } = useLocalSearchParams<{ sessionId?: string; dailyContext?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const [input, setInput] = useState('');
@@ -109,7 +112,7 @@ export default function AIChatScreen() {
       // Always start a new session on fresh entry
       const sessionTitle = dailyContext
         ? deriveTitleFromContext(dailyContext)
-        : 'AI Консультація';
+        : getDefaultSessionTitle(locale);
       const newSession: AIChatSession = {
         id: Date.now().toString(),
         title: sessionTitle,
@@ -118,7 +121,7 @@ export default function AIChatScreen() {
           {
             id: '0',
             role: 'assistant',
-            content: `Вітаю! Я ваш особистий AI Езотерик.\n\nЯ можу допомогти вам:\n• Розтлумачити карти Таро\n• Проаналізувати вашу Матрицю Долі\n• Відповісти на питання про майбутнє\n• Дати поради щодо стосунків та кар'єри\n\nПоставте своє питання або оберіть тему нижче`,
+            content: getAIWelcomeMessage(locale),
             createdAt: new Date().toISOString(),
           },
         ],
@@ -158,32 +161,33 @@ export default function AIChatScreen() {
         .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
       const systemPrompt = buildSystemPrompt(userName, userBirthDate, matrixSummary, dailyMatrixContext);
-      const aiText = await askClaude(systemPrompt, history, msg, 1500);
+      const aiText = await askClaude(systemPrompt, history, msg, 1500, locale);
 
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiText || 'Всесвіт мовчить. Спробуйте перефразувати питання.',
+        content: aiText || getAIFallbackMessage(locale),
         createdAt: new Date().toISOString(),
       };
       addMessageToSession(sessionId, aiMsg);
 
       // Auto-generate title from first user message if still generic
+      const defaultTitle = getDefaultSessionTitle(locale);
       const session = useAppStore.getState().chatSessions.find((s) => s.id === sessionId);
-      if (session && session.title === 'AI Консультація') {
+      if (session && session.title === defaultTitle) {
         const firstUserMsg = session.messages.find((m) => m.role === 'user');
         if (firstUserMsg) {
           const autoTitle = firstUserMsg.content.slice(0, 45).replace(/\n/g, ' ').trim();
-          updateSessionTitle(sessionId, autoTitle.length > 0 ? autoTitle : 'AI Консультація');
+          updateSessionTitle(sessionId, autoTitle.length > 0 ? autoTitle : defaultTitle);
         }
       }
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Невідома помилка';
-      Alert.alert('Помилка AI', errMsg, [{ text: 'OK' }]);
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      Alert.alert(getAIErrorTitle(locale), errMsg, [{ text: 'OK' }]);
     } finally {
       setIsLoading(false);
     }
-  }, [activeSessionId, input, isPremium, currentSession, userName, userBirthDate, matrixSummary]);
+  }, [activeSessionId, input, isPremium, currentSession, userName, userBirthDate, matrixSummary, locale]);
 
   const messages = currentSession?.messages ?? [];
 

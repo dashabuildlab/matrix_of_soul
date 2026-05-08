@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,15 +8,55 @@ import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { useI18n } from '@/lib/i18n';
 
-const LANGUAGES = [
-  { code: 'en', label: 'English (US)', flag: '🇺🇸', native: 'English (US)' },
-  { code: 'en-GB', label: 'English (UK)', flag: '🇬🇧', native: 'English (UK)' },
-  { code: 'uk', label: 'Українська', flag: '🇺🇦', native: 'Українська' },
+type LangItem = {
+  code: string;
+  flag: string;
+  native: string;   // Language name in the language itself
+  label: string;    // Language name in English
+  region: string;   // Market label
+};
+
+const LANGUAGES: LangItem[] = [
+  // English first — default language
+  { code: 'en',    flag: '🇺🇸', native: 'English (US)',  label: 'English (US)',       region: 'Global · Business' },
+  { code: 'en-GB', flag: '🇬🇧', native: 'English (UK)',  label: 'English (UK)',       region: 'Great Britain' },
+  // European
+  { code: 'de',    flag: '🇩🇪', native: 'Deutsch',       label: 'German',             region: 'Deutschland · Österreich · Schweiz' },
+  { code: 'fr',    flag: '🇫🇷', native: 'Français',      label: 'French',             region: 'France · Belgique · Suisse' },
+  // Latin America
+  { code: 'es',    flag: '🇲🇽', native: 'Español',       label: 'Spanish',            region: 'América Latina · USA' },
+  { code: 'pt-BR', flag: '🇧🇷', native: 'Português',     label: 'Portuguese (Brazil)', region: 'Brasil' },
+  // Asia & Middle East
+  { code: 'zh',    flag: '🇨🇳', native: '中文',           label: 'Chinese (Simplified)', region: '中国大陆' },
+  { code: 'ar',    flag: '🇸🇦', native: 'العربية',        label: 'Arabic',             region: 'الشرق الأوسط' },
+  // Local
+  { code: 'uk',    flag: '🇺🇦', native: 'Українська',    label: 'Ukrainian',          region: 'Україна' },
 ];
 
 export default function LanguageScreen() {
   const router = useRouter();
   const { locale, setLocale, t } = useI18n();
+
+  const RTL_LOCALES = ['ar'];
+  const currentIsRTL = RTL_LOCALES.includes(locale);
+
+  const handleSelect = (code: string) => {
+    const nextIsRTL = RTL_LOCALES.includes(code);
+    setLocale(code);
+    // If switching between RTL/LTR or vice versa, show restart notice
+    if (nextIsRTL !== currentIsRTL) {
+      Alert.alert(
+        nextIsRTL ? 'يتطلب إعادة تشغيل' : 'Restart Required',
+        nextIsRTL
+          ? 'ستُطبَّق اللغة العربية واتجاه النص عند إعادة تشغيل التطبيق.'
+          : 'The layout direction change will take effect after restarting the app.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    } else {
+      // Small delay so the user sees the checkmark before going back
+      setTimeout(() => router.back(), 180);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -39,12 +80,19 @@ export default function LanguageScreen() {
         {LANGUAGES.map((lang) => {
           const isActive = locale === lang.code;
           return (
-            <TouchableOpacity key={lang.code} activeOpacity={0.7} onPress={() => setLocale(lang.code)}>
+            <TouchableOpacity
+              key={lang.code}
+              activeOpacity={0.7}
+              onPress={() => handleSelect(lang.code)}
+            >
               <Card style={[styles.langRow, isActive && styles.langRowActive]}>
                 <Text style={styles.flag}>{lang.flag}</Text>
                 <View style={styles.langInfo}>
-                  <Text style={[styles.langLabel, isActive && styles.langLabelActive]}>{lang.native}</Text>
-                  <Text style={styles.langSub}>{lang.label}</Text>
+                  <Text style={[styles.langNative, isActive && styles.langNativeActive]}>
+                    {lang.native}
+                  </Text>
+                  <Text style={styles.langLabel}>{lang.label}</Text>
+                  <Text style={styles.langRegion}>{lang.region}</Text>
                 </View>
                 {isActive && (
                   <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
@@ -63,9 +111,13 @@ export default function LanguageScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.bg },
   header: { padding: Spacing.xl, paddingTop: 60, paddingBottom: Spacing.lg },
-  backBtn: { position: 'absolute', top: 56, left: Spacing.lg, zIndex: 1, padding: 8 },
+  backBtn: {
+    position: 'absolute', top: 56, left: Spacing.lg, zIndex: 1, padding: 8,
+  },
   headerContent: { alignItems: 'center', gap: 6 },
-  headerTitle: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '800', marginTop: 4 },
+  headerTitle: {
+    color: Colors.text, fontSize: FontSize.xl, fontWeight: '800', marginTop: 4,
+  },
   headerSubtitle: { color: 'rgba(167,139,250,0.75)', fontSize: FontSize.sm },
   content: { padding: Spacing.lg },
   infoCard: {
@@ -73,11 +125,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.25)',
   },
   infoText: { flex: 1, color: Colors.textSecondary, fontSize: FontSize.sm, lineHeight: 20 },
-  langRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.sm },
+  langRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.sm,
+  },
   langRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryMuted },
-  flag: { fontSize: 28 },
+  flag: { fontSize: 30 },
   langInfo: { flex: 1 },
-  langLabel: { color: Colors.text, fontSize: FontSize.md, fontWeight: '600' },
-  langLabelActive: { color: Colors.primaryLight },
-  langSub: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
+  langNative: {
+    color: Colors.text, fontSize: FontSize.md, fontWeight: '700',
+  },
+  langNativeActive: { color: Colors.primaryLight },
+  langLabel: { color: Colors.textSecondary, fontSize: FontSize.sm, marginTop: 1 },
+  langRegion: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
 });

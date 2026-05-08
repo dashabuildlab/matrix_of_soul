@@ -18,7 +18,7 @@ export interface PendingAnalysis {
   matrixName: string;
   matrixBirthDate: string;
   matrixData: MatrixData;
-  locale: 'uk' | 'en';
+  locale: string;
   status: PendingAnalysisStatus;
   progress: number;   // sections completed so far
   total: number;      // total sections
@@ -212,7 +212,7 @@ interface AppState {
     matrixName: string;
     matrixBirthDate: string;
     matrixData: MatrixData;
-    locale: 'uk' | 'en';
+    locale: string;
     total: number;
   }) => void;
   setAnalysisCurrentSection: (title: string) => void;

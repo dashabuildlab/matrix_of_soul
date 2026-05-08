@@ -45,7 +45,7 @@ export interface StartAnalysisParams {
   matrixName: string;
   matrixBirthDate: string;
   matrixData: MatrixData;
-  locale: 'uk' | 'en';
+  locale: string; // Any app locale: 'en', 'en-GB', 'uk', 'es', 'zh', 'ar', 'de', 'fr', 'pt-BR'
 }
 
 /** Begin a fresh generation. If one is already running, this is a no-op. */
@@ -125,6 +125,7 @@ async function _runLoop(startIndex: number): Promise<void> {
             [] as ClaudeMessage[],
             prompt,
             tokenBudget,
+            pending.locale,
           );
           break;
         } catch (err: any) {

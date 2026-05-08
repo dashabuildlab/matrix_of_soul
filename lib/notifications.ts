@@ -52,7 +52,7 @@ export { GIFT_DIAMONDS };
 export async function scheduleAnalysisReadyNotification(
   matrixId: string,
   matrixName: string,
-  locale: 'uk' | 'en',
+  locale: string,
 ): Promise<void> {
   const N = await getNotifications();
   if (!N) return;
