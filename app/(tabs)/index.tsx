@@ -272,12 +272,9 @@ Write a summary of the daily matrix (3-4 sentences). ${destinyMatrix ? 'Always c
   }, [dailyEnergy, dailyMatrix, destinyMatrix, isPremium, tokens, MODAL_CACHE_KEY]);
 
   // ── Open / close modal ───────────────────────────────────────────────────────
+  // Modal is a FREE preview of the daily matrix (energy numbers + diagram).
+  // Paywall is only the gate to /matrix/daily (the full screen with AI summary).
   const openModal = useCallback(() => {
-    const cached = dailyMatrixCache[MODAL_CACHE_KEY];
-    if (!isPremium && tokens < MODAL_SUMMARY_COST && !cached) {
-      router.push('/paywall');
-      return;
-    }
     setAvatarModalVisible(true);
     Animated.parallel([
       Animated.timing(bgScale,      { toValue: 0.93, duration: 380, easing: easeOut, useNativeDriver: true }),
@@ -319,7 +316,14 @@ Write a summary of the daily matrix (3-4 sentences). ${destinyMatrix ? 'Always c
         Animated.timing(matrixAnim,  { toValue: 1, duration: 700, delay: 200, useNativeDriver: true }),
         Animated.spring(matrixScale, { toValue: 1, tension: 60, friction: 8, delay: 200, useNativeDriver: true }),
       ]).start();
-      if (!modalSummary) generateModalSummary();
+      // Modal is a free preview — show cached AI summary if already paid for
+       // on /matrix/daily (shared cache by date), but never auto-spend crystals here.
+      // The 3 💎 cost is consumed on /matrix/daily where the full matrix lives.
+      if (!modalSummary) {
+        const cached =
+          dailyMatrixCache[MODAL_CACHE_KEY] ?? dailyMatrixCache[todayDate];
+        if (cached) setModalSummary(cached);
+      }
       return () => clearTimeout(fallback);
     } else {
       matrixAnim.setValue(0);
@@ -516,23 +520,37 @@ Write a summary of the daily matrix (3-4 sentences). ${destinyMatrix ? 'Always c
                 ) : null}
               </View>
 
-              {/* CTA */}
-              <View style={modalStyles.ctaWrap}>
-                <TouchableOpacity
-                  style={modalStyles.ctaBtn}
-                  onPress={() => {
-                    closeModal();
-                    setTimeout(() => {
-                      router.push(isPremium ? '/matrix/daily' : '/paywall' as any);
-                    }, 320);
-                  }}
-                >
-                  <Ionicons name={isPremium ? 'grid-outline' : 'lock-closed'} size={18} color={Colors.accent} />
-                  <Text style={modalStyles.ctaText}>
-                    {isPremium ? 'Відкрити повну матрицю дня' : 'Розблокувати Матрицю Долі'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {/* CTA — Matrix of the Day is paid, but unlocks if user has 3 crystals
+                   (e.g. from the daily gift). matrix/daily.tsx will spend them on entry. */}
+              {(() => {
+                const canEnterDaily = isPremium || tokens >= MODAL_SUMMARY_COST;
+                return (
+                  <View style={modalStyles.ctaWrap}>
+                    <TouchableOpacity
+                      style={modalStyles.ctaBtn}
+                      onPress={() => {
+                        closeModal();
+                        setTimeout(() => {
+                          router.push(canEnterDaily ? '/matrix/daily' : '/paywall' as any);
+                        }, 320);
+                      }}
+                    >
+                      <Ionicons
+                        name={canEnterDaily ? 'grid-outline' : 'lock-closed'}
+                        size={18}
+                        color={Colors.accent}
+                      />
+                      <Text style={modalStyles.ctaText}>
+                        {isPremium
+                          ? 'Відкрити повну матрицю дня'
+                          : canEnterDaily
+                            ? `Відкрити за ${MODAL_SUMMARY_COST} 💎`
+                            : 'Розблокувати Матрицю Долі'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })()}
             </ScrollView>
           </Animated.View>
         </View>

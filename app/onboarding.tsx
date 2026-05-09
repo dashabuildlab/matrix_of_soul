@@ -1100,6 +1100,7 @@ export default function OnboardingScreen() {
 
   const setUserProfile         = useAppStore((s) => s.setUserProfile);
   const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
+  const setDestinyMatrix       = useAppStore((s) => s.setDestinyMatrix);
 
   const handleDone = async (authenticated = false) => {
     await SecureStore.setItemAsync('onboarding_done', 'true');
@@ -1111,13 +1112,22 @@ export default function OnboardingScreen() {
       useAppStore.setState({ isAuthenticated: true, userId: guestId });
     }
 
-    // Compute and store matrix in zustand if birth date available
+    // Compute AND PERSIST destinyMatrix in zustand so the user lands on
+    // /(tabs)/matrix already seeing their personal matrix (instead of the
+    // demo 1990-06-15 fallback used when destinyMatrix is null).
     if (birthDate) {
       try {
         const parts = birthDate.split('.');
         if (parts.length === 3) {
           const dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          calculateMatrix(dateStr); // validates the date
+          const matrixData = calculateMatrix(dateStr);
+          setDestinyMatrix({
+            id: Date.now().toString(),
+            name: nameInput || 'Моя Матриця Долі',
+            birthDate,
+            data: matrixData,
+            createdAt: new Date().toISOString(),
+          });
         }
       } catch {}
     }
