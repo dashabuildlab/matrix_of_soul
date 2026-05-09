@@ -2,7 +2,7 @@
   "expo": {
     "name": "Matrix of Soul",
     "slug": "matrix-of-soul",
-    "version": "1.0.34",
+    "version": "1.0.35",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.matrixofsoul.myapp-",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "34",
+      "buildNumber": "35",
       "minimumOsVersion": "16.0",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Ми використовуємо дані для покращення досвіду та персоналізації контенту в межах застосунку.",
@@ -48,7 +48,7 @@
         "backgroundColor": "#0A0A1A"
       },
       "package": "com.matrixofsoul.app",
-      "versionCode": 34,
+      "versionCode": 35,
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -58,7 +58,14 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"
+          ]
+        }
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       [
