@@ -290,7 +290,7 @@ const uk = {
     deleteAccountAlert: 'Видалення акаунту',
     deleteAccountMsg: 'Всі ваші дані будуть видалені назавжди. Цю дію неможливо скасувати.',
     deleteAccountBtn: 'Видалити',
-    version: 'Matrix of Destiny & Tarot v1.0.0',
+    version: 'Matrix of Destiny & Tarot v1.0.36',
   },
 
   // ── Language screen ──

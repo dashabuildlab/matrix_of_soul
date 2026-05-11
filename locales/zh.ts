@@ -292,7 +292,7 @@ const zh: Translations = {
     deleteAccountAlert: '删除账户',
     deleteAccountMsg: '你的所有数据将被永久删除，此操作无法撤销。',
     deleteAccountBtn: '删除',
-    version: 'Matrix of Destiny & Tarot v1.0.0',
+    version: 'Matrix of Destiny & Tarot v1.0.36',
   },
 
   // ── Language screen ──

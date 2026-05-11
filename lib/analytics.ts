@@ -85,7 +85,7 @@ export function getZodiacSign(birthDate: string): string {
 // APP OPEN
 // ═════════════════════════════════════════════════════════════════════════════
 
-export function trackAppOpen(language: string, openSource: 'organic' | 'push' = 'organic', isFirstOpen: boolean = false, appVersion: string = '1.0.0') {
+export function trackAppOpen(language: string, openSource: 'organic' | 'push' = 'organic', isFirstOpen: boolean = false, appVersion: string = '1.0.36') {
   track('app_open', { language, open_source: openSource, is_first_open: String(isFirstOpen), app_version: appVersion });
 }
 

@@ -7,8 +7,8 @@ import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { useI18n } from '@/lib/i18n';
 
-const APP_VERSION = '1.0.30';
-const BUILD = '30';
+const APP_VERSION = '1.0.36';
+const BUILD = '36';
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -80,17 +80,10 @@ export default function AboutScreen() {
         </TouchableOpacity>
 
         <Text style={styles.sectionLabel}>{locale === 'uk' ? 'Юридична інформація' : 'Legal'}</Text>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL('https://matrixofdestinytarot.com/privacy-policy')}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL('https://matrixofdestinytarot.com/uk/privacy/')}>
           <Card style={styles.linkRow}>
             <Ionicons name="shield-checkmark-outline" size={20} color={Colors.primary} />
             <Text style={styles.linkText}>{locale === 'uk' ? 'Політика конфіденційності' : 'Privacy Policy'}</Text>
-            <Ionicons name="open-outline" size={16} color={Colors.textMuted} style={{ marginLeft: 'auto' }} />
-          </Card>
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => Linking.openURL('https://matrixofdestinytarot.com/terms-of-service')}>
-          <Card style={styles.linkRow}>
-            <Ionicons name="document-text-outline" size={20} color={Colors.primary} />
-            <Text style={styles.linkText}>{locale === 'uk' ? 'Умови використання' : 'Terms of Service'}</Text>
             <Ionicons name="open-outline" size={16} color={Colors.textMuted} style={{ marginLeft: 'auto' }} />
           </Card>
         </TouchableOpacity>

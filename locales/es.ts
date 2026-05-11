@@ -292,7 +292,7 @@ const es: Translations = {
     deleteAccountAlert: 'Eliminar cuenta',
     deleteAccountMsg: 'Todos tus datos serán eliminados permanentemente. Esta acción no se puede deshacer.',
     deleteAccountBtn: 'Eliminar',
-    version: 'Matrix of Destiny & Tarot v1.0.0',
+    version: 'Matrix of Destiny & Tarot v1.0.36',
   },
 
   // ── Language screen ──
