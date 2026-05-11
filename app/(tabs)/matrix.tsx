@@ -47,6 +47,23 @@ export default function MatrixScreen() {
   const [generating, setGenerating] = useState(false);
   const autoGenDone = useRef(false);
 
+  // ── Matrix data (MUST be declared BEFORE the auto-save effect that
+  //    references previewMatrix — otherwise we hit a temporal dead zone
+  //    and React throws ReferenceError on first render). ─────────────────
+  const previewMatrix = useMemo(() => {
+    if (!userBirthDate) return null;
+    try {
+      const parts = userBirthDate.split('.');
+      return parts.length === 3
+        ? calculateMatrix(`${parts[2]}-${parts[1]}-${parts[0]}`)
+        : calculateMatrix(userBirthDate);
+    } catch { return null; }
+  }, [userBirthDate]);
+
+  const demoMatrix = useMemo(() => {
+    try { return calculateMatrix(DEMO_DATE); } catch { return null; }
+  }, []);
+
   // ── Auto-save destinyMatrix when premium + birth date ─────────────────────
   // Prevents the "matrix is visible but button still says Створити" confusion.
   useEffect(() => {
@@ -90,21 +107,6 @@ export default function MatrixScreen() {
       tension: 35,
       useNativeDriver: true,
     }).start();
-  }, []);
-
-  // ── Matrix data ───────────────────────────────────────────────────────────
-  const previewMatrix = useMemo(() => {
-    if (!userBirthDate) return null;
-    try {
-      const parts = userBirthDate.split('.');
-      return parts.length === 3
-        ? calculateMatrix(`${parts[2]}-${parts[1]}-${parts[0]}`)
-        : calculateMatrix(userBirthDate);
-    } catch { return null; }
-  }, [userBirthDate]);
-
-  const demoMatrix = useMemo(() => {
-    try { return calculateMatrix(DEMO_DATE); } catch { return null; }
   }, []);
 
   // Which data to display (prefer generated, then preview, then demo placeholder)
