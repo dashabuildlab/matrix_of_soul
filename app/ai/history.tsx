@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { useAppStore } from '@/stores/useAppStore';

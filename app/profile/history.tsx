@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
@@ -69,7 +69,7 @@ export default function HistoryScreen() {
 
               {/* Info */}
               <View style={styles.historyInfo}>
-                <Text style={styles.historyName}>{entry.cardNameUk}</Text>
+                <Text style={styles.historyName}>{entry.cardName}</Text>
                 <Text style={styles.historyDate}>
                   {weekday}, {dateLabel}
                 </Text>
@@ -94,14 +94,13 @@ export default function HistoryScreen() {
       <View style={[styles.listWrap, wide && styles.listWrapWide]}>
         {dailyMatrixHistory.map((entry) => (
           <TouchableOpacity
-            key={entry.date + entry.locale}
+            key={entry.date}
             style={styles.historyRow}
             activeOpacity={0.7}
             onPress={() => {
-              // Show full analysis in alert (or navigate)
               Alert.alert(
-                `${entry.energyName} (${entry.dailyEnergyId})`,
-                entry.aiAnalysis || (locale === 'uk' ? 'Аналіз недоступний' : 'Analysis unavailable'),
+                `${entry.energyName} (${entry.energyId})`,
+                entry.summary || (locale === 'uk' ? 'Аналіз недоступний' : 'Analysis unavailable'),
               );
             }}
           >
@@ -114,7 +113,7 @@ export default function HistoryScreen() {
                 {new Date(entry.date + 'T00:00:00Z').toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' })}
               </Text>
               <Text style={styles.historyQuestion} numberOfLines={2}>
-                {entry.aiAnalysis?.substring(0, 80) ?? ''}...
+                {entry.summary?.substring(0, 80) ?? ''}...
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />

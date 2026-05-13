@@ -4,10 +4,9 @@ import {
   Platform, ScrollView, TouchableOpacity, Alert, Animated, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Button } from '../../components/ui/Button';
 import { supabase } from '../../lib/supabase';
@@ -22,11 +21,22 @@ const DOTS = Array.from({ length: 18 }, (_, i) => ({
   o: 0.07 + (i % 4) * 0.025,
 }));
 
-GoogleSignin.configure({
-  webClientId: '113578995852-gphg055rh0mopfnub9iosj9d7crfujh1.apps.googleusercontent.com',
-  iosClientId: '113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu.apps.googleusercontent.com',
-  scopes: ['email', 'profile'],
-});
+// Lazy-load GoogleSignin so the native module isn't required at parse time.
+// This prevents crashes in Expo Go where RNGoogleSignin is not linked.
+function getGoogleSignin() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
+    GoogleSignin.configure({
+      webClientId: '113578995852-gphg055rh0mopfnub9iosj9d7crfujh1.apps.googleusercontent.com',
+      iosClientId: '113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu.apps.googleusercontent.com',
+      scopes: ['email', 'profile'],
+    });
+    return { GoogleSignin, statusCodes };
+  } catch {
+    return null;
+  }
+}
 
 export default function LoginScreen() {
   const [email, setEmail]           = useState('');
@@ -109,6 +119,12 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoadingGoogle(true);
     try {
+      const gs = getGoogleSignin();
+      if (!gs) {
+        Alert.alert('Помилка', 'Google Sign-In недоступний у цьому середовищі');
+        return;
+      }
+      const { GoogleSignin, statusCodes } = gs;
       await GoogleSignin.hasPlayServices();
       await GoogleSignin.signIn();
       const { idToken } = await GoogleSignin.getTokens();
@@ -120,7 +136,8 @@ export default function LoginScreen() {
         if (error) throw error;
       }
     } catch (e: any) {
-      if (e.code !== statusCodes.SIGN_IN_CANCELLED) {
+      const SIGN_IN_CANCELLED = '12501';
+      if (e.code !== SIGN_IN_CANCELLED && e.code !== 'SIGN_IN_CANCELLED') {
         Alert.alert('Помилка', e.message ?? 'Не вдалось увійти через Google');
       }
     } finally {

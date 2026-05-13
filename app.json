@@ -2,7 +2,7 @@
   "expo": {
     "name": "Matrix of Soul",
     "slug": "matrix-of-soul",
-    "version": "1.0.36",
+    "version": "1.0.37",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,12 +16,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.matrixofsoul.myapp-",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "36",
+      "buildNumber": "37",
       "minimumOsVersion": "16.0",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Ми використовуємо дані для покращення досвіду та персоналізації контенту в межах застосунку.",
         "NSPhotoLibraryUsageDescription": "Для збереження та обміну результатами розкладів.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIAppFonts": [
+          "Ionicons.ttf"
+        ]
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -48,7 +51,7 @@
         "backgroundColor": "#0A0A1A"
       },
       "package": "com.matrixofsoul.app",
-      "versionCode": 36,
+      "versionCode": 37,
       "googleServicesFile": "./google-services.json"
     },
     "web": {

@@ -286,7 +286,7 @@ const fr: Translations = {
     deleteAccountAlert: 'Supprimer le compte',
     deleteAccountMsg: 'Toutes tes données seront définitivement supprimées. Cette action est irréversible.',
     deleteAccountBtn: 'Supprimer',
-    version: 'Matrix of Destiny & Tarot v1.0.36',
+    version: 'Matrix of Destiny & Tarot v1.0.37',
   },
 
   // ── Language screen ──

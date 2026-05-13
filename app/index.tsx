@@ -11,17 +11,29 @@ export default function Index() {
   useEffect(() => {
     const decide = async () => {
       try {
+        // DEV: uncomment to reset all flags for testing
+        // await SecureStore.deleteItemAsync('welcome_seen');
+        // await SecureStore.deleteItemAsync('onboarding_done');
+
+        // 1. Show welcome video screen on very first launch
+        const welcomeSeen = await SecureStore.getItemAsync('welcome_seen');
+        if (welcomeSeen !== 'true') {
+          setRoute('/welcome');
+          return;
+        }
+
+        // 2. Show onboarding if not completed
         const onboardingDone = await SecureStore.getItemAsync('onboarding_done');
         if (onboardingDone !== 'true') {
           setRoute('/onboarding');
           return;
         }
 
+        // 3. Route by auth state
         const { data: { session } } = await supabase.auth.getSession();
         setRoute(session ? '/(tabs)/matrix' : '/auth/login');
       } catch {
-        // On any error fall back to onboarding so the user is never stuck
-        setRoute('/onboarding');
+        setRoute('/welcome');
       }
     };
     decide();

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 // No react-native-reanimated — replaced with native Animated to avoid worklets version mismatch in Expo Go
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import * as AppleAuthentication from 'expo-apple-authentication';

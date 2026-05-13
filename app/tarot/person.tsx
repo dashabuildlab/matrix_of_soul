@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
@@ -36,7 +36,8 @@ const SPREAD_POSITIONS = [
 
 export default function PersonScreen() {
   const router = useRouter();
-  const isPremium = useAppStore((s) => s.isPremium);
+  const isPremium      = useAppStore((s) => s.isPremium);
+  const addTarotSpread = useAppStore((s) => s.addTarotSpread);
   const [step, setStep] = useState(1); // 1=info, 2=result
   const [personName, setPersonName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
@@ -72,6 +73,14 @@ export default function PersonScreen() {
       setCards(drawn);
       setIsLoading(false);
       setStep(2);
+
+      addTarotSpread({
+        id: Date.now().toString(),
+        type: 'person',
+        question,
+        cards: drawn.map((c) => c.card.id),
+        createdAt: new Date().toISOString(),
+      });
     }, 2000);
   };
 

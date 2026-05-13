@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
@@ -281,7 +281,7 @@ export default function TarotScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bg },
   container: { flex: 1 },
-  content: { padding: Spacing.lg, paddingBottom: 120 },
+  content: { padding: Spacing.lg, paddingTop: 56, paddingBottom: 120 },
 
   sectionTitle: {
     color: Colors.text,

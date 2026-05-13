@@ -8,7 +8,7 @@ import {
   Share,
   Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Card } from '../components/ui/Card';

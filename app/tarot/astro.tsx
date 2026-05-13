@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
@@ -79,14 +80,14 @@ const RETROGRADES = [
 ];
 
 const LUNAR_PHASES = [
-  { name: 'Новий місяць', emoji: '🌑', energy: 'Нові початки', bestFor: 'Встановлення намірів, нові проєкти' },
-  { name: 'Зростаючий місяць', emoji: '🌒', energy: 'Накопичення', bestFor: 'Розвиток проєктів, навчання' },
-  { name: 'Перша чверть', emoji: '🌓', energy: 'Дія', bestFor: 'Прийняття рішень, активні кроки' },
-  { name: 'Зростаючий горб', emoji: '🌔', energy: 'Концентрація', bestFor: 'Деталізація, вдосконалення' },
-  { name: 'Повний місяць', emoji: '🌕', energy: 'Кульмінація', bestFor: 'Завершення, святкування, ритуали' },
-  { name: 'Спадаючий горб', emoji: '🌖', energy: 'Вдячність', bestFor: 'Оцінка результатів, відпочинок' },
-  { name: 'Остання чверть', emoji: '🌗', energy: 'Відпускання', bestFor: 'Звільнення від старого, очищення' },
-  { name: 'Спадаючий місяць', emoji: '🌘', energy: 'Відновлення', bestFor: 'Медитація, інтроспекція' },
+  { name: 'Новий місяць',     icon: 'ellipse-outline' as const,        energy: 'Нові початки',   bestFor: 'Встановлення намірів, нові проєкти' },
+  { name: 'Зростаючий місяць', icon: 'moon-outline' as const,          energy: 'Накопичення',    bestFor: 'Розвиток проєктів, навчання' },
+  { name: 'Перша чверть',     icon: 'contrast-outline' as const,       energy: 'Дія',            bestFor: 'Прийняття рішень, активні кроки' },
+  { name: 'Зростаючий горб',  icon: 'partly-sunny-outline' as const,   energy: 'Концентрація',   bestFor: 'Деталізація, вдосконалення' },
+  { name: 'Повний місяць',    icon: 'radio-button-on-outline' as const, energy: 'Кульмінація',   bestFor: 'Завершення, святкування, ритуали' },
+  { name: 'Спадаючий горб',   icon: 'partly-sunny-outline' as const,   energy: 'Вдячність',      bestFor: 'Оцінка результатів, відпочинок' },
+  { name: 'Остання чверть',   icon: 'contrast-outline' as const,       energy: 'Відпускання',    bestFor: 'Звільнення від старого, очищення' },
+  { name: 'Спадаючий місяць', icon: 'moon-outline' as const,           energy: 'Відновлення',    bestFor: 'Медитація, інтроспекція' },
 ];
 
 // Simulate current lunar phase (in real app would calculate)
@@ -108,6 +109,7 @@ const DAILY_FORECAST = {
 };
 
 export default function AstroScreen() {
+  const router = useRouter();
   const [activeRetrograde, setActiveRetrograde] = useState(0);
   const [showAllRetro, setShowAllRetro] = useState(false);
 
@@ -115,6 +117,20 @@ export default function AstroScreen() {
   const planet = RETROGRADES[activeRetrograde];
 
   return (
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="close" size={24} color={Colors.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <LinearGradient
@@ -122,7 +138,7 @@ export default function AstroScreen() {
         style={styles.header}
       >
         <Text style={styles.headerDate}>Астрологічний прогноз</Text>
-        <Text style={styles.headerTitle}>✨ Сьогодні</Text>
+        <Text style={styles.headerTitle}>Сьогодні</Text>
 
         {/* Energy meter */}
         <View style={styles.energyMeter}>
@@ -136,7 +152,7 @@ export default function AstroScreen() {
 
       {/* Daily Forecast */}
       <Card style={styles.forecastCard}>
-        <Text style={styles.forecastTitle}>📅 Прогноз Дня</Text>
+        <Text style={styles.forecastTitle}>Прогноз Дня</Text>
         <Text style={styles.forecastText}>{DAILY_FORECAST.message}</Text>
 
         <View style={styles.favorableSection}>
@@ -164,7 +180,7 @@ export default function AstroScreen() {
       {/* Lunar Phase */}
       <Card style={styles.lunarCard}>
         <View style={styles.lunarHeader}>
-          <Text style={styles.lunarEmoji}>{LUNAR_PHASES[CURRENT_PHASE_INDEX].emoji}</Text>
+          <Ionicons name={LUNAR_PHASES[CURRENT_PHASE_INDEX].icon} size={44} color={Colors.primaryLight} />
           <View>
             <Text style={styles.lunarPhase}>{LUNAR_PHASES[CURRENT_PHASE_INDEX].name}</Text>
             <Text style={styles.lunarDay}>{CURRENT_LUNAR_DAY}-й місячний день</Text>
@@ -174,9 +190,12 @@ export default function AstroScreen() {
             <Text style={styles.lunarEnergyValue}>{LUNAR_PHASES[CURRENT_PHASE_INDEX].energy}</Text>
           </View>
         </View>
-        <Text style={styles.lunarBestFor}>
-          🌟 Найкраще для: {LUNAR_PHASES[CURRENT_PHASE_INDEX].bestFor}
-        </Text>
+        <View style={styles.lunarBestForRow}>
+          <Ionicons name="star-outline" size={14} color={Colors.accent} />
+          <Text style={styles.lunarBestFor}>
+            Найкраще для: {LUNAR_PHASES[CURRENT_PHASE_INDEX].bestFor}
+          </Text>
+        </View>
       </Card>
 
       {/* Retrogrades */}
@@ -276,6 +295,7 @@ export default function AstroScreen() {
         </Text>
       </Card>
     </ScrollView>
+    </>
   );
 }
 
@@ -375,7 +395,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  lunarEmoji: { fontSize: 44 },
   lunarPhase: {
     color: Colors.text,
     fontSize: FontSize.md,
@@ -398,10 +417,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: '700',
   },
+  lunarBestForRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
   lunarBestFor: {
     color: Colors.textSecondary,
     fontSize: FontSize.sm,
     lineHeight: 20,
+    flex: 1,
   },
 
   section: {

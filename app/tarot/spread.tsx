@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
@@ -40,9 +40,10 @@ export default function SpreadScreen() {
   }>();
   const count = parseInt(cardsCount || '3');
   const spreadName = nameParam || SPREAD_NAMES[type] || 'Розклад';
-  const isPremium     = useAppStore((s) => s.isPremium);
-  const tokens        = useAppStore((s) => s.tokens);
-  const spendCrystals = useAppStore((s) => s.spendCrystals);
+  const isPremium      = useAppStore((s) => s.isPremium);
+  const tokens         = useAppStore((s) => s.tokens);
+  const spendCrystals  = useAppStore((s) => s.spendCrystals);
+  const addTarotSpread = useAppStore((s) => s.addTarotSpread);
 
   const [question, setQuestion] = useState('');
   const [questionError, setQuestionError] = useState<string | null>(null);
@@ -77,6 +78,14 @@ export default function SpreadScreen() {
     }
     setCards(drawn);
     setRevealed(true);
+
+    addTarotSpread({
+      id: Date.now().toString(),
+      type: type || 'spread',
+      question,
+      cards: drawn,
+      createdAt: new Date().toISOString(),
+    });
   };
 
   const positionLabels = [

@@ -4,7 +4,7 @@ import {
   TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
 import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases';

@@ -152,17 +152,17 @@ export function MatrixDiagram({
     // Center
     { key: 'center', x: CX, y: CY,        value: d,  r: 22*scale, color: AXIS_COLORS.center, textColor: '#000' },
     // Left axis
-    { key: 'left_0', x: pLeft.x,   y: pLeft.y,   value: L0, r: 18*scale, color: AXIS_COLORS.left,   labelAbove: '0 y.o.' },
+    { key: 'left_0', x: pLeft.x,   y: pLeft.y,   value: L0, r: 18*scale, color: AXIS_COLORS.left,   labelAbove: '0 р.' },
     { key: 'left_1', x: lLeft_1.x, y: lLeft_1.y, value: L1, r: 14*scale, color: energyColor(L1) },
     { key: 'left_2', x: lLeft_2.x, y: lLeft_2.y, value: L2, r: 13*scale, color: energyColor(L2) },
     { key: 'left_3', x: lLeft_3.x, y: lLeft_3.y, value: L3, r: 11*scale, color: energyColor(L3) },
     // Right axis
-    { key: 'right_0', x: pRight.x,   y: pRight.y,   value: R0, r: 18*scale, color: AXIS_COLORS.right,  labelAbove: '40 y.o.' },
+    { key: 'right_0', x: pRight.x,   y: pRight.y,   value: R0, r: 18*scale, color: AXIS_COLORS.right,  labelAbove: '40 р.' },
     { key: 'right_1', x: lRight_1.x, y: lRight_1.y, value: R1, r: 14*scale, color: energyColor(R1) },
     { key: 'right_2', x: lRight_2.x, y: lRight_2.y, value: R2, r: 13*scale, color: energyColor(R2) },
     { key: 'right_3', x: lRight_3.x, y: lRight_3.y, value: R3, r: 11*scale, color: energyColor(R3) },
     // Top axis
-    { key: 'top_0', x: pTop.x,   y: pTop.y,   value: T0, r: 18*scale, color: AXIS_COLORS.top,    labelAbove: '20 y.o.' },
+    { key: 'top_0', x: pTop.x,   y: pTop.y,   value: T0, r: 18*scale, color: AXIS_COLORS.top,    labelAbove: '20 р.' },
     { key: 'top_1', x: lTop_1.x, y: lTop_1.y, value: T1, r: 14*scale, color: energyColor(T1) },
     { key: 'top_2', x: lTop_2.x, y: lTop_2.y, value: T2, r: 13*scale, color: energyColor(T2) },
     { key: 'top_3', x: lTop_3.x, y: lTop_3.y, value: T3, r: 11*scale, color: energyColor(T3) },
@@ -170,12 +170,12 @@ export function MatrixDiagram({
     { key: 'bot_3', x: lBot_3.x, y: lBot_3.y, value: B3, r: 11*scale, color: energyColor(B3) },
     { key: 'bot_2', x: lBot_2.x, y: lBot_2.y, value: B2, r: 13*scale, color: AXIS_COLORS.bottom },
     { key: 'bot_1', x: lBot_1.x, y: lBot_1.y, value: B1, r: 14*scale, color: energyColor(B1) },
-    { key: 'bot_0', x: pBot.x,   y: pBot.y,   value: B0, r: 18*scale, color: AXIS_COLORS.right, labelBelow: '60 y.o.' },
+    { key: 'bot_0', x: pBot.x,   y: pBot.y,   value: B0, r: 18*scale, color: AXIS_COLORS.right, labelBelow: '60 р.' },
     // Corner nodes
-    { key: 'topLeft',  x: pTopLeft.x,  y: pTopLeft.y,  value: TL, r: 12*scale, color: AXIS_COLORS.corner, labelAbove: '10 y.o.' },
-    { key: 'topRight', x: pTopRight.x, y: pTopRight.y, value: TR, r: 12*scale, color: AXIS_COLORS.corner, labelAbove: '30 y.o.' },
-    { key: 'botRight', x: pBotRight.x, y: pBotRight.y, value: BR, r: 12*scale, color: AXIS_COLORS.corner, labelBelow: '50 y.o.' },
-    { key: 'botLeft',  x: pBotLeft.x,  y: pBotLeft.y,  value: BL, r: 12*scale, color: AXIS_COLORS.corner, labelBelow: '70 y.o.' },
+    { key: 'topLeft',  x: pTopLeft.x,  y: pTopLeft.y,  value: TL, r: 12*scale, color: AXIS_COLORS.corner, labelAbove: '10 р.' },
+    { key: 'topRight', x: pTopRight.x, y: pTopRight.y, value: TR, r: 12*scale, color: AXIS_COLORS.corner, labelAbove: '30 р.' },
+    { key: 'botRight', x: pBotRight.x, y: pBotRight.y, value: BR, r: 12*scale, color: AXIS_COLORS.corner, labelBelow: '50 р.' },
+    { key: 'botLeft',  x: pBotLeft.x,  y: pBotLeft.y,  value: BL, r: 12*scale, color: AXIS_COLORS.corner, labelBelow: '70 р.' },
   ];
 
   return (

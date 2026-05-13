@@ -13,7 +13,7 @@ import {
   Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Button } from '../../components/ui/Button';

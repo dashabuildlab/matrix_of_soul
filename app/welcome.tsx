@@ -11,7 +11,7 @@ import {
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useI18n } from '@/lib/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from '@/lib/storage';
@@ -150,7 +150,7 @@ export default function WelcomeScreen() {
                 <Animated.View style={[ws.btnGlow, { opacity: glowPulse }]} />
                 <Pressable onPress={handleStart} style={ws.btnPress}>
                   <LinearGradient
-                    colors={Colors.gradientGold as unknown as string[]}
+                    colors={['#C8901A', '#F5C542', '#F0B429'] as string[]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={ws.btnGrad}
@@ -229,7 +229,7 @@ export default function WelcomeScreen() {
               android_ripple={{ color: 'rgba(255,255,255,0.2)', borderless: false }}
             >
               <LinearGradient
-                colors={Colors.gradientGold as unknown as string[]}
+                colors={['#C8901A', '#F5C542', '#F0B429'] as string[]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.btnGradient}
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.accentDark,
+    shadowColor: '#92650A',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 16,

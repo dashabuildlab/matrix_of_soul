@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, Stack } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { useI18n } from '@/lib/i18n';
 
-const APP_VERSION = '1.0.36';
-const BUILD = '36';
+const APP_VERSION = '1.0.37';
+const BUILD = '37';
 
 export default function AboutScreen() {
   const router = useRouter();

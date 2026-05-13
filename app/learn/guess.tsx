@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { useAppStore } from '@/stores/useAppStore';

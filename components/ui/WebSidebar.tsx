@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { usePathname, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, BorderRadius } from '@/constants/theme';
 import { SIDEBAR_WIDTH } from '@/hooks/useResponsive';
@@ -120,7 +120,7 @@ export function WebSidebar() {
         <View style={styles.bottomDivider} />
         <View style={styles.bottomInfo}>
           <Text style={styles.bottomAppName}>Matrix of Soul</Text>
-          <Text style={styles.bottomVersion}>v1.0.36</Text>
+          <Text style={styles.bottomVersion}>v1.0.37</Text>
         </View>
         <Text style={styles.sidebarBottomDec}>✦  ·  ✦  ·  ✦</Text>
       </View>

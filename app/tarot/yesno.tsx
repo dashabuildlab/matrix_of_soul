@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
@@ -48,7 +48,8 @@ const ANSWER_CONFIG = {
 
 export default function YesNoScreen() {
   const router = useRouter();
-  const isPremium = useAppStore((s) => s.isPremium);
+  const isPremium      = useAppStore((s) => s.isPremium);
+  const addTarotSpread = useAppStore((s) => s.addTarotSpread);
   const [question, setQuestion] = useState('');
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [result, setResult] = useState<{ card: (typeof TAROT_CARDS)[0]; isReversed: boolean } | null>(null);
@@ -74,6 +75,14 @@ export default function YesNoScreen() {
       const isReversed = Math.random() > 0.6;
       setResult({ card: randomCard, isReversed });
       setIsRevealing(false);
+
+      addTarotSpread({
+        id: Date.now().toString(),
+        type: 'yesno',
+        question,
+        cards: [randomCard.id],
+        createdAt: new Date().toISOString(),
+      });
 
       Animated.spring(cardScale, {
         toValue: 1,

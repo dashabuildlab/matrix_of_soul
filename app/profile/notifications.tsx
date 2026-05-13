@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
@@ -21,16 +21,10 @@ export default function NotificationsScreen() {
   const pushEnabled = useAppStore((s) => s.pushEnabled);
   const setPushEnabled = useAppStore((s) => s.setPushEnabled);
   const dailyCardEnabled = useAppStore((s) => s.dailyCardEnabled);
-  const setOnboardingPreferences = useAppStore((s) => s.setOnboardingPreferences);
-  const knowledgeLevel = useAppStore((s) => s.knowledgeLevel);
-  const lifeFocus = useAppStore((s) => s.lifeFocus);
+  const setDailyCardEnabled = useAppStore((s) => s.setDailyCardEnabled);
 
   const toggleDailyCard = async (val: boolean) => {
-    setOnboardingPreferences({
-      knowledgeLevel: knowledgeLevel || 'beginner',
-      lifeFocus,
-      dailyCardEnabled: val,
-    });
+    setDailyCardEnabled(val);
     if (val) {
       await scheduleDailyCardNotification(locale);
     } else {
