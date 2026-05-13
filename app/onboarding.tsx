@@ -27,10 +27,10 @@ import { useI18n } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-type Step = 'welcome' | 'intent' | 'focus' | 'gender' | 'dob' | 'generating' | 'aha' | 'registration';
+type Step = 'welcome' | 'intent' | 'gender' | 'dob' | 'generating' | 'aha' | 'registration';
 
 /** Steps shown in the top progress bar */
-const PROGRESS_STEPS: Step[] = ['welcome', 'intent', 'focus', 'gender', 'dob'];
+const PROGRESS_STEPS: Step[] = ['welcome', 'intent', 'gender', 'dob'];
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 const DAYS   = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -360,60 +360,9 @@ function IntentStep({ onNext, onBack }: { onNext: (intent: string) => void; onBa
   );
 }
 
-// ─── Step 3: Focus ─────────────────────────────────────────────────────────────
-function FocusStep({ onNext, onBack }: { onNext: (focus: string) => void; onBack: () => void }) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const { fadeIn, slideUp } = useEntrance();
-
-  const OPTIONS = [
-    { id: 'clarity',   icon: 'bulb-outline'         as const, label: 'Хочу більше ясності у своєму житті' },
-    { id: 'relations', icon: 'heart-outline'         as const, label: 'Мене хвилюють стосунки' },
-    { id: 'strengths', icon: 'star-outline'          as const, label: 'Хочу зрозуміти свої сильні сторони' },
-    { id: 'direction', icon: 'compass-outline'       as const, label: 'Не знаю, куди рухатись далі' },
-    { id: 'daily',     icon: 'notifications-outline' as const, label: 'Хочу отримувати щоденні підказки' },
-  ];
-  const canContinue = selected.length > 0;
-
-  const toggleOption = (id: string) =>
-    setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-
-  return (
-    <Animated.View style={[{ flex: 1 }, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
-      <View style={styles.stepHeader}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
-        </TouchableOpacity>
-        <Text style={styles.stepTitle}>Що хвилює{'\n'}тебе найбільше?</Text>
-        <Text style={styles.stepSub}>Обери те, що зараз найближче</Text>
-      </View>
-      <View style={{ flex: 1, paddingHorizontal: Spacing.lg }}>
-        {OPTIONS.map((o, i) => (
-          <OptionRow
-            key={o.id}
-            id={o.id}
-            icon={o.icon}
-            label={o.label}
-            active={selected.includes(o.id)}
-            onToggle={toggleOption}
-            enterDelay={i * 80}
-          />
-        ))}
-      </View>
-      <View style={styles.bottomBtn}>
-        <TouchableOpacity onPress={() => { if (canContinue) { Vibration.vibrate(30); onNext(selected.join(',')); } }} activeOpacity={canContinue ? 0.85 : 1}>
-          <LinearGradient
-            colors={canContinue ? ['#C8901A', '#F5C542', '#C8901A'] : ['#2a2240', '#3a2e5a']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={styles.bigBtn}
-          >
-            <Text style={[styles.bigBtnTextDark, !canContinue && { color: 'rgba(255,255,255,0.35)' }]}>Продовжимо</Text>
-            <Ionicons name="arrow-forward" size={18} color={canContinue ? '#1A0800' : 'rgba(255,255,255,0.35)'} />
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
-  );
-}
+// FocusStep removed — was a duplicate of IntentStep (asked essentially the
+// same question with overlapping options like "щоденні підказки"). The
+// onboarding now goes directly Intent → Gender → DOB.
 
 // ─── Step 4: Gender ────────────────────────────────────────────────────────────
 function GenderStep({ onNext, onBack }: { onNext: (gender: 'male' | 'female') => void; onBack: () => void }) {
@@ -1049,11 +998,10 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => onDone(false)} activeOpacity={0.85} style={{ marginTop: Spacing.md }}>
-          <View style={{ height: 48, borderRadius: BorderRadius.full, borderWidth: 1.5, borderColor: 'rgba(139,92,246,0.5)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(139,92,246,0.12)' }}>
-            <Text style={{ color: '#FFFFFF', fontSize: FontSize.sm, fontWeight: '600' }}>Продовжити без реєстрації</Text>
-          </View>
-        </TouchableOpacity>
+        {/* "Продовжити без реєстрації" button removed — registration is now
+            mandatory to save the user's matrix and unlock app features.
+            See feedback_dev_rules.md ("обов'язкові Sign in with Apple/Google
+            (НЕ Skip login)"). */}
       </View>
     </Animated.View>
   );
@@ -1096,7 +1044,7 @@ export default function OnboardingScreen() {
   const [birthDate, setBirthDate] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [intent,    setIntent]    = useState('self');
-  const [focus,     setFocus]     = useState('clarity');
+  // focus state removed along with FocusStep (it duplicated IntentStep)
 
   const setUserProfile         = useAppStore((s) => s.setUserProfile);
   const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
@@ -1143,20 +1091,14 @@ export default function OnboardingScreen() {
         )}
         {step === 'intent' && (
           <IntentStep
-            onNext={(i) => { setIntent(i); setStep('focus'); }}
+            onNext={(i) => { setIntent(i); setStep('gender'); }}
             onBack={() => setStep('welcome')}
-          />
-        )}
-        {step === 'focus' && (
-          <FocusStep
-            onNext={(f) => { setFocus(f); setStep('gender'); }}
-            onBack={() => setStep('intent')}
           />
         )}
         {step === 'gender' && (
           <GenderStep
             onNext={() => setStep('dob')}
-            onBack={() => setStep('focus')}
+            onBack={() => setStep('intent')}
           />
         )}
         {step === 'dob' && (
