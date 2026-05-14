@@ -33,10 +33,17 @@ export default function WelcomeScreen() {
   });
 
   useEffect(() => {
+    // Check if player is already ready (race condition: event may fire before listener is set up)
+    if ((welcomePlayer as any).status === 'readyToPlay') {
+      setVideoReady(true);
+      return;
+    }
     const sub = welcomePlayer.addListener('statusChange', (ev: any) => {
       if (ev.status === 'readyToPlay') setVideoReady(true);
     });
-    return () => sub.remove();
+    // Fallback: show video after 1.5s regardless (catches devices where event never fires)
+    const fallback = setTimeout(() => setVideoReady(true), 1500);
+    return () => { sub.remove(); clearTimeout(fallback); };
   }, []);
 
   useEffect(() => {
