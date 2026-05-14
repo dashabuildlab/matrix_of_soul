@@ -39,6 +39,7 @@
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "expo-video": "~3.0.16",
+    "lucide-react-native": "^1.16.0",
     "promise": "^8.3.0",
     "react": "19.1.0",
     "react-dom": "^19.2.6",

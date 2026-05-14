@@ -22,9 +22,7 @@
         "NSUserTrackingUsageDescription": "Ми використовуємо дані для покращення досвіду та персоналізації контенту в межах застосунку.",
         "NSPhotoLibraryUsageDescription": "Для збереження та обміну результатами розкладів.",
         "ITSAppUsesNonExemptEncryption": false,
-        "UIAppFonts": [
-          "Ionicons.ttf"
-        ]
+        "UIAppFonts": []
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -61,12 +59,6 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      [
-        "expo-font",
-        {
-          "fonts": ["./assets/fonts/Ionicons.ttf"]
-        }
-      ],
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
       [
@@ -78,8 +70,7 @@
       "expo-audio",
       "expo-apple-authentication",
       "expo-video",
-      "./plugins/withOptionalHardwareFeatures",
-      "./plugins/withAndroidIoniconsFix"
+      "./plugins/withOptionalHardwareFeatures"
     ]
   }
 }
