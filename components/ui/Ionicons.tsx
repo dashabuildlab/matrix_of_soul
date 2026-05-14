@@ -7,15 +7,15 @@ import { StyleProp, TextStyle } from 'react-native';
 import {
   AlertCircle, AlertTriangle, ArrowDown, ArrowDownCircle, ArrowLeft,
   ArrowRight, ArrowRightCircle, ArrowUpCircle, Bell, BookOpen, Calendar,
-  Check, CheckCircle, ChevronLeft, ChevronRight, Circle, Clock,
-  CloudOff, Compass, Copy, Cpu, Diamond, Download, ExternalLink, Eye,
-  EyeOff, FileText, Flame, Gift, Globe, Hand, Heart, HelpCircle,
-  Info, Key, Layers, Leaf, Library, Lock, LogOut, Mail, MessageCircle,
-  MessagesSquare, Infinity, Plus, PlusCircle, Play, RefreshCw, Save,
-  Scale, Search, Send, Share2, Shield, ShieldCheck, Shuffle, Sparkles,
-  Star, Sun, Timer, Trash2, TrendingUp, Trophy, User, UserCircle,
-  UserPlus, Users, Wrench, X, XCircle, Zap, LucideIcon, Lightbulb,
-  SkipBack, SkipForward,
+  Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
+  Circle, Clock, CloudOff, Compass, Copy, Cpu, Diamond, Download,
+  ExternalLink, Eye, EyeOff, FileText, Flame, Gift, Globe, Hand, Heart,
+  HelpCircle, Info, Key, Layers, Leaf, Library, Lock, LogOut, Mail,
+  MessageCircle, MessagesSquare, Infinity, Plus, PlusCircle, Play,
+  RefreshCw, Save, Scale, Search, Send, Share2, Shield, ShieldCheck,
+  Shuffle, Sparkles, Star, Sun, Timer, Trash2, TrendingUp, Trophy,
+  User, UserCircle, UserPlus, Users, Volume2, VolumeX, Wrench, X,
+  XCircle, Zap, LucideIcon, Lightbulb, SkipBack, SkipForward,
 } from 'lucide-react-native';
 import Svg, { Path, G } from 'react-native-svg';
 
@@ -67,7 +67,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'checkmark-circle':          CheckCircle,
   'checkmark-circle-outline':  CheckCircle,
   'chevron-back':              ChevronLeft,
+  'chevron-down':              ChevronDown,
   'chevron-forward':           ChevronRight,
+  'chevron-up':                ChevronUp,
   'close':                     X,
   'close-circle':              XCircle,
   'close-circle-outline':      XCircle,
@@ -140,6 +142,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'trending-up-outline':       TrendingUp,
   'trophy':                    Trophy,
   'trophy-outline':            Trophy,
+  'volume-medium-outline':     Volume2,
+  'volume-mute-outline':       VolumeX,
   'warning-outline':           AlertTriangle,
 };
 
