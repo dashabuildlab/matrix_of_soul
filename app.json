@@ -78,7 +78,8 @@
       "expo-audio",
       "expo-apple-authentication",
       "expo-video",
-      "./plugins/withOptionalHardwareFeatures"
+      "./plugins/withOptionalHardwareFeatures",
+      "./plugins/withAndroidIoniconsFix"
     ]
   }
 }

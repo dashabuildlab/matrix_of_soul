@@ -2,10 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, Text, Animated, TouchableOpacity } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Ionicons from '@/components/ui/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { Colors } from '../constants/theme';
 import { initializePurchases } from '../lib/purchases';
@@ -14,12 +13,8 @@ import { initializeNotifications } from '../lib/notifications';
 import { useAppStore, Achievement } from '../stores/useAppStore';
 import { I18nProvider, useI18n } from '../lib/i18n';
 
-// Keep the native splash visible until icon fonts have loaded — prevents
-// the brief moment where icons are missing/blank after the JS bundle starts.
-// Without this, every <Ionicons name=…/> renders as an empty box on first paint.
-SplashScreen.preventAutoHideAsync().catch(() => {
-  // Already hidden or unavailable (e.g. on web) — safe to ignore.
-});
+// Keep native splash visible until auth state + onboarding are resolved.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AchievementToast({ achievement, onHide }: { achievement: Achievement; onHide: () => void }) {
   const { t } = useI18n();
@@ -112,12 +107,6 @@ function StreakToast({ streak, onHide }: { streak: number; onHide: () => void })
 // Inner component — has access to I18nProvider context
 function AppInit() {
   const { t } = useI18n();
-
-  // Load icon fonts BEFORE first render of any screen — otherwise every
-  // <Ionicons name=…/> shows as an empty box.
-  // `Ionicons.font` resolves to { Ionicons: require('…/Ionicons.ttf') }.
-  // useFonts() returns [loaded, error]. We block render until loaded.
-  const [fontsLoaded, fontsError] = useFonts({ ...Ionicons.font });
 
   const [firebaseUser, setFirebaseUser] = useState<{ uid: string } | null>(null);
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
@@ -227,20 +216,12 @@ function AppInit() {
     };
   }, []);
 
-  // Hide splash once fonts are ready (or errored — don't block app forever).
-  // Done in an effect so it runs after commit, not during render.
+  // Hide splash once auth + onboarding state are resolved.
   useEffect(() => {
-    if (fontsLoaded || fontsError) {
+    if (!loading && onboardingDone !== null) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontsError]);
-
-  // Block first paint until icon fonts are loaded — prevents all <Ionicons>
-  // from rendering as empty boxes. If fonts fail to load (rare), proceed
-  // anyway after the error so the user isn't stuck on a blank screen.
-  if (!fontsLoaded && !fontsError) {
-    return null; // native splash is still visible (preventAutoHideAsync above)
-  }
+  }, [loading, onboardingDone]);
 
   if (loading || onboardingDone === null) {
     return (
