@@ -292,7 +292,7 @@ const zh: Translations = {
     deleteAccountAlert: '删除账户',
     deleteAccountMsg: '你的所有数据将被永久删除，此操作无法撤销。',
     deleteAccountBtn: '删除',
-    version: 'Matrix of Destiny & Tarot v1.0.37',
+    version: 'Matrix of Destiny & Tarot v1.0.41',
   },
 
   // ── Language screen ──
@@ -888,9 +888,6 @@ const zh: Translations = {
     questionOptionalHint: '问题越具体，答案越精准',
     focusHint: '想着让你困扰的事情，然后按下按钮',
     drawCards: '抽牌',
-    cardsRevealed: '牌已揭示！',
-    cardsRevealing: '牌正在揭示中...',
-    viewInterpretation: '查看解读',
     fellReversed: '逆位落牌',
     reversedHint: '逆位牌指向内在阻碍、延误或牌能量的阴暗面。其含义并非相反——而是更深层，需要更多关注。',
     aiSummaryLabel: 'AI总结',

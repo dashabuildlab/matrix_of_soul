@@ -7,8 +7,8 @@ import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { Card } from '@/components/ui/Card';
 import { useI18n } from '@/lib/i18n';
 
-const APP_VERSION = '1.0.37';
-const BUILD = '37';
+const APP_VERSION = '1.0.41';
+const BUILD = '41';
 
 export default function AboutScreen() {
   const router = useRouter();

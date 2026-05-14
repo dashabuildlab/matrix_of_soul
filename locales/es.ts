@@ -292,7 +292,7 @@ const es: Translations = {
     deleteAccountAlert: 'Eliminar cuenta',
     deleteAccountMsg: 'Todos tus datos serán eliminados permanentemente. Esta acción no se puede deshacer.',
     deleteAccountBtn: 'Eliminar',
-    version: 'Matrix of Destiny & Tarot v1.0.37',
+    version: 'Matrix of Destiny & Tarot v1.0.41',
   },
 
   // ── Language screen ──
@@ -888,9 +888,6 @@ const es: Translations = {
     questionOptionalHint: 'Cuanto más específica sea la pregunta, más precisa será la respuesta',
     focusHint: 'Piensa en lo que te preocupa y presiona el botón',
     drawCards: 'Tirar cartas',
-    cardsRevealed: '¡Cartas reveladas!',
-    cardsRevealing: 'Las cartas se están revelando...',
-    viewInterpretation: 'Ver interpretación',
     fellReversed: 'Cayó invertida',
     reversedHint: 'Una carta invertida señala bloqueos internos, retrasos o el lado oscuro de la energía de la carta. Su significado no es opuesto — es más profundo y requiere más atención.',
     aiSummaryLabel: 'Resumen AI',

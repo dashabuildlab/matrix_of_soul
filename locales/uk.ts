@@ -290,7 +290,7 @@ const uk = {
     deleteAccountAlert: 'Видалення акаунту',
     deleteAccountMsg: 'Всі ваші дані будуть видалені назавжди. Цю дію неможливо скасувати.',
     deleteAccountBtn: 'Видалити',
-    version: 'Matrix of Destiny & Tarot v1.0.37',
+    version: 'Matrix of Destiny & Tarot v1.0.41',
   },
 
   // ── Language screen ──
@@ -886,9 +886,6 @@ const uk = {
     questionOptionalHint: 'Чим конкретніше питання — тим точніша відповідь',
     focusHint: 'Подумайте про те, що вас хвилює, та натисніть кнопку',
     drawCards: 'Розкласти карти',
-    cardsRevealed: 'Карти розкрито!',
-    cardsRevealing: 'Карти розкриваються...',
-    viewInterpretation: 'Переглянути тлумачення',
     fellReversed: 'Випала перевернутою',
     reversedHint: 'Перевернута карта вказує на внутрішні блоки, затримки або тіньовий бік енергії карти. Її значення не протилежне — воно глибше та потребує більше уваги.',
     aiSummaryLabel: 'Підсумок AI',

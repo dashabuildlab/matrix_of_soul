@@ -34,7 +34,7 @@ const PROGRESS_STEPS: Step[] = ['welcome', 'intent', 'gender', 'dob'];
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 const DAYS   = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
-const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+// MONTHS now sourced from t.onboarding.months via useI18n() in BirthDateStep
 const YEARS  = Array.from({ length: 71 }, (_, i) => String(1940 + i));
 
 // ─── Wheel Picker ──────────────────────────────────────────────────────────────
@@ -107,6 +107,7 @@ function useEntrance() {
 
 // ─── Step 1: Welcome ───────────────────────────────────────────────────────────
 function WelcomeStep({ onNext }: { onNext: () => void }) {
+  const { t } = useI18n();
   const cosmosRot     = useRef(new Animated.Value(0)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
   const subtitleY       = useRef(new Animated.Value(14)).current;
@@ -179,21 +180,36 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
           letterSpacing: 4, marginBottom: Spacing.md,
           opacity: subtitleOpacity, transform: [{ translateY: subtitleY }],
         }}>
-          {'МАТРИЦЯ ДОЛІ & ТАРО'}
+          {t.auth.loginTitle.toUpperCase()}
         </Animated.Text>
 
-        <Animated.Text style={[styles.welcomeTitle, { opacity: line1Opacity, transform: [{ translateY: line1Y }] }]}>
-          Дізнайся, що
-        </Animated.Text>
-        <Animated.Text style={[styles.welcomeTitle, { opacity: line2Opacity, transform: [{ translateY: line2Y }] }]}>
-          записано у твоїй
-        </Animated.Text>
-        <Animated.Text style={[styles.welcomeTitle, { opacity: line3Opacity, transform: [{ translateY: line3Y }], marginBottom: Spacing.lg }]}>
-          даті народження
-        </Animated.Text>
+        {/* welcomeTitle is multi-line (separated by \n) — split for animated reveal */}
+        {(() => {
+          const lines = t.onboarding.welcomeTitle.split('\n');
+          const [l1, l2, l3] = [lines[0] || '', lines[1] || '', lines[2] || ''];
+          return (
+            <>
+              <Animated.Text style={[styles.welcomeTitle, { opacity: line1Opacity, transform: [{ translateY: line1Y }] }]}>
+                {l1}
+              </Animated.Text>
+              {l2 ? (
+                <Animated.Text style={[styles.welcomeTitle, { opacity: line2Opacity, transform: [{ translateY: line2Y }] }]}>
+                  {l2}
+                </Animated.Text>
+              ) : null}
+              {l3 ? (
+                <Animated.Text style={[styles.welcomeTitle, { opacity: line3Opacity, transform: [{ translateY: line3Y }], marginBottom: Spacing.lg }]}>
+                  {l3}
+                </Animated.Text>
+              ) : (
+                <View style={{ marginBottom: Spacing.lg }} />
+              )}
+            </>
+          );
+        })()}
 
         <Animated.Text style={[styles.stepSub, { textAlign: 'center', color: 'rgba(255,255,255,0.78)', opacity: descOpacity }]}>
-          Матриця Долі та Таро — AI-провідник для самопізнання, стосунків та життєвого шляху
+          {t.onboarding.welcomeSub}
         </Animated.Text>
       </View>
 
@@ -210,7 +226,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.bigBtn}
             >
-              <Text style={styles.bigBtnTextDark}>Продовжимо</Text>
+              <Text style={styles.bigBtnTextDark}>{t.onboarding.welcomeCta}</Text>
               <Ionicons name="arrow-forward" size={18} color="#1A0800" />
             </LinearGradient>
           </TouchableOpacity>
@@ -287,6 +303,7 @@ function OptionRow({
 
 // ─── Step 2: Intent ────────────────────────────────────────────────────────────
 function IntentStep({ onNext, onBack }: { onNext: (intent: string) => void; onBack: () => void }) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<string[]>([]);
   const { fadeIn, slideUp } = useEntrance();
   const btnScale   = useRef(new Animated.Value(1)).current;
@@ -294,11 +311,11 @@ function IntentStep({ onNext, onBack }: { onNext: (intent: string) => void; onBa
   const prevCanContinue = useRef(false);
 
   const OPTIONS = [
-    { id: 'self',      icon: 'person-circle-outline' as const, label: 'Краще зрозуміти себе' },
-    { id: 'relations', icon: 'heart-outline'          as const, label: 'Стосунки та сумісність' },
-    { id: 'path',      icon: 'navigate-outline'       as const, label: 'Життєвий шлях і призначення' },
-    { id: 'daily',     icon: 'sunny-outline'          as const, label: 'Щоденні підказки' },
-    { id: 'tarot',     icon: 'sparkles-outline'       as const, label: 'Таро та духовні практики' },
+    { id: 'self',      icon: 'person-circle-outline' as const, label: t.onboarding.intent1 },
+    { id: 'relations', icon: 'heart-outline'          as const, label: t.onboarding.intent2 },
+    { id: 'path',      icon: 'navigate-outline'       as const, label: t.onboarding.intent3 },
+    { id: 'daily',     icon: 'sunny-outline'          as const, label: t.onboarding.intent4 },
+    { id: 'tarot',     icon: 'sparkles-outline'       as const, label: t.onboarding.intent5 },
   ];
   const canContinue = selected.length > 0;
 
@@ -326,8 +343,8 @@ function IntentStep({ onNext, onBack }: { onNext: (intent: string) => void; onBa
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
-        <Text style={styles.stepTitle}>Що тебе найбільше{'\n'}цікавить зараз?</Text>
-        <Text style={styles.stepSub}>Ми підлаштуємо досвід під твій запит</Text>
+        <Text style={styles.stepTitle}>{t.onboarding.intentTitle}</Text>
+        <Text style={styles.stepSub}>{t.onboarding.intentSub}</Text>
       </View>
       <View style={{ flex: 1, paddingHorizontal: Spacing.lg }}>
         {OPTIONS.map((o, i) => (
@@ -350,7 +367,7 @@ function IntentStep({ onNext, onBack }: { onNext: (intent: string) => void; onBa
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={styles.bigBtn}
             >
-              <Text style={[styles.bigBtnTextDark, !canContinue && { color: 'rgba(255,255,255,0.35)' }]}>Продовжимо</Text>
+              <Text style={[styles.bigBtnTextDark, !canContinue && { color: 'rgba(255,255,255,0.35)' }]}>{t.onboarding.welcomeCta}</Text>
               <Ionicons name="arrow-forward" size={18} color={canContinue ? '#1A0800' : 'rgba(255,255,255,0.35)'} />
             </LinearGradient>
           </TouchableOpacity>
@@ -366,12 +383,13 @@ function IntentStep({ onNext, onBack }: { onNext: (intent: string) => void; onBa
 
 // ─── Step 4: Gender ────────────────────────────────────────────────────────────
 function GenderStep({ onNext, onBack }: { onNext: (gender: 'male' | 'female') => void; onBack: () => void }) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<'male' | 'female' | null>(null);
   const { fadeIn, slideUp } = useEntrance();
 
   const GENDERS = [
-    { id: 'male' as const,   icon: 'male-outline'   as const, label: 'Чоловік' },
-    { id: 'female' as const, icon: 'female-outline' as const, label: 'Жінка' },
+    { id: 'male' as const,   icon: 'male-outline'   as const, label: t.onboarding.genderMale },
+    { id: 'female' as const, icon: 'female-outline' as const, label: t.onboarding.genderFemale },
   ];
 
   const renderOption = (g: typeof GENDERS[0]) => {
@@ -398,8 +416,8 @@ function GenderStep({ onNext, onBack }: { onNext: (gender: 'male' | 'female') =>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
-        <Text style={styles.stepTitle}>Ваша стать</Text>
-        <Text style={styles.stepSub}>Для точніших та персоналізованих тлумачень</Text>
+        <Text style={styles.stepTitle}>{t.onboarding.chooseGender}</Text>
+        <Text style={styles.stepSub}>{t.onboarding.chooseGenderSub}</Text>
       </View>
       <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.lg }}>
         {GENDERS.map(renderOption)}
@@ -411,7 +429,7 @@ function GenderStep({ onNext, onBack }: { onNext: (gender: 'male' | 'female') =>
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={styles.bigBtn}
           >
-            <Text style={[styles.bigBtnTextDark, !selected && { color: 'rgba(255,255,255,0.4)' }]}>Продовжимо</Text>
+            <Text style={[styles.bigBtnTextDark, !selected && { color: 'rgba(255,255,255,0.4)' }]}>{t.onboarding.welcomeCta}</Text>
             <Ionicons name="arrow-forward" size={18} color={selected ? '#1A0800' : 'rgba(255,255,255,0.4)'} />
           </LinearGradient>
         </TouchableOpacity>
@@ -425,14 +443,16 @@ function BirthDateStep({ onNext, onBack }: {
   onNext: (birthDate: string, name: string) => void;
   onBack: () => void;
 }) {
+  const { t } = useI18n();
+  const months = t.onboarding.months;
   const [userName, setUserName] = useState('');
   const [day,   setDay]   = useState('15');
-  const [month, setMonth] = useState(MONTHS[5]);
+  const [month, setMonth] = useState(months[5]);
   const [year,  setYear]  = useState('1990');
   const { fadeIn, slideUp } = useEntrance();
 
   const handleNext = () => {
-    const mm = String(MONTHS.indexOf(month) + 1).padStart(2, '0');
+    const mm = String(months.indexOf(month) + 1).padStart(2, '0');
     onNext(`${day}.${mm}.${year}`, userName.trim());
   };
 
@@ -443,13 +463,13 @@ function BirthDateStep({ onNext, onBack }: {
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
-          <Text style={[styles.stepTitle, { fontSize: FontSize.xl }]}>Вкажи свою дату{'\n'}народження</Text>
+          <Text style={[styles.stepTitle, { fontSize: FontSize.xl }]}>{t.onboarding.dobTitle}</Text>
           <Text style={[styles.stepSub, { color: 'rgba(255,255,255,0.85)', fontSize: FontSize.xs, marginBottom: 4 }]}>
-            На основі дати народження ми розрахуємо твою персональну Матрицю Долі — 22 енергії, таланти, призначення та кармічні уроки
+            {t.onboarding.dobSub}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
             <Ionicons name="lock-closed-outline" size={10} color="rgba(245,197,66,0.75)" />
-            <Text style={{ color: 'rgba(245,197,66,0.75)', fontSize: 10 }}>Зберігається тільки на твоєму пристрої</Text>
+            <Text style={{ color: 'rgba(245,197,66,0.75)', fontSize: 10 }}>{t.onboarding.storedOnDevice}</Text>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -462,7 +482,7 @@ function BirthDateStep({ onNext, onBack }: {
             textAlign: 'center', borderWidth: 1, borderColor: 'rgba(139,92,246,0.25)',
             marginBottom: Spacing.sm,
           }}
-          placeholder="Ваше ім'я"
+          placeholder={t.onboarding.yourName}
           placeholderTextColor={Colors.textMuted}
           value={userName}
           onChangeText={setUserName}
@@ -472,21 +492,21 @@ function BirthDateStep({ onNext, onBack }: {
         <View style={styles.wheelsRow}>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <WheelPicker data={DAYS} initialIdx={DAYS.indexOf('15')} onChange={setDay} />
-            <Text style={styles.wheelLabel}>ДЕНЬ</Text>
+            <Text style={styles.wheelLabel}>{t.onboarding.day}</Text>
           </View>
           <View style={styles.wheelsDivider} />
           <View style={{ flex: 2, alignItems: 'center' }}>
-            <WheelPicker data={MONTHS} initialIdx={5} onChange={setMonth} />
-            <Text style={styles.wheelLabel}>МІСЯЦЬ</Text>
+            <WheelPicker data={months} initialIdx={5} onChange={setMonth} />
+            <Text style={styles.wheelLabel}>{t.onboarding.month}</Text>
           </View>
           <View style={styles.wheelsDivider} />
           <View style={{ flex: 1.3, alignItems: 'center' }}>
             <WheelPicker data={YEARS} initialIdx={YEARS.indexOf('1990')} onChange={setYear} />
-            <Text style={styles.wheelLabel}>РІК</Text>
+            <Text style={styles.wheelLabel}>{t.onboarding.year}</Text>
           </View>
         </View>
         <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, textAlign: 'center', marginTop: 6 }}>
-          Дата зберігається лише на твоєму пристрої та використовується тільки для розрахунку матриці
+          {t.onboarding.dobPrivacy}
         </Text>
       </View>
 
@@ -497,7 +517,7 @@ function BirthDateStep({ onNext, onBack }: {
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={[styles.bigBtn, !userName.trim() && { opacity: 0.5 }]}
           >
-            <Text style={styles.bigBtnTextDark}>Розрахувати мою матрицю</Text>
+            <Text style={styles.bigBtnTextDark}>{t.onboarding.dobCta}</Text>
             <Ionicons name="arrow-forward" size={18} color="#1A0800" />
           </LinearGradient>
         </TouchableOpacity>
@@ -508,12 +528,13 @@ function BirthDateStep({ onNext, onBack }: {
 
 // ─── Step 6: Generating ────────────────────────────────────────────────────────
 function GeneratingStep({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n();
   const GEN_STEPS = [
-    'Зчитуємо вашу дату народження...',
-    'Розраховуємо 22 енергії матриці...',
-    'Визначаємо особистість та душу...',
-    'Аналізуємо кармічні уроки...',
-    'Матриця готова!',
+    t.onboarding.planStep1,
+    t.onboarding.planStep2,
+    t.onboarding.planStep3,
+    t.onboarding.planStep4,
+    t.onboarding.genReady,
   ];
   const [stepIdx, setStepIdx] = useState(0);
   const [done, setDone]       = useState(false);
@@ -598,8 +619,8 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
         </View>
       </View>
 
-      <Text style={styles.planTitle}>{done ? 'Готово!' : 'Розраховуємо матрицю...'}</Text>
-      <Text style={styles.planSubtitle}>{done ? 'Ваша персональна матриця розрахована' : GEN_STEPS[stepIdx]}</Text>
+      <Text style={styles.planTitle}>{done ? t.onboarding.genReady : t.onboarding.generatingTitle}</Text>
+      <Text style={styles.planSubtitle}>{done ? t.onboarding.genReadyDesc : GEN_STEPS[stepIdx]}</Text>
 
       <View style={styles.progressTrack}>
         <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
@@ -633,7 +654,7 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
 // ─── Step 7: Aha Teaser ────────────────────────────────────────────────────────
 function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: string }) {
   const { fadeIn, slideUp } = useEntrance();
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
   const [aiTeaser, setAiTeaser]   = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(true);
 
@@ -700,7 +721,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.stepHeader}>
-          <Text style={[styles.stepTitle, { marginTop: 12 }]}>Ось, що ми вже{'\n'}бачимо про тебе</Text>
+          <Text style={[styles.stepTitle, { marginTop: 12 }]}>{t.onboarding.ahaTitle}</Text>
         </View>
 
         {/* Matrix preview with gradient overlay */}
@@ -714,6 +735,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
               />
             </View>
             <View style={styles.ahaMatrixLock} pointerEvents="none">
+              {/* TODO i18n: key for "✦ Твоя унікальна Матриця ✦" not in locales */}
               <Text style={{ color: Colors.accent, fontSize: FontSize.sm, fontWeight: '800', letterSpacing: 1.5, textAlign: 'center' }}>
                 ✦ Твоя унікальна Матриця ✦
               </Text>
@@ -732,14 +754,14 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
           return (
             <View style={styles.ahaCard}>
               <Text style={{ color: Colors.accent, fontSize: FontSize.xs, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', textAlign: 'center', marginBottom: Spacing.sm }}>
-                ТВОЯ МАТРИЦЯ ДОЛІ
+                {t.matrix.title}
               </Text>
 
               {/* Personality — fully open */}
               <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Ionicons name="person-outline" size={18} color="#F59E0B" />
-                  <Text style={{ color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' }}>Особистість</Text>
+                  <Text style={{ color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' }}>{t.matrix.personality}</Text>
                 </View>
                 <Text style={{ color: '#F59E0B', fontSize: FontSize.md, fontWeight: '800', marginTop: 6 }}>
                   {matrixData.personality}. {personality?.name}
@@ -753,7 +775,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
               <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Ionicons name="heart-outline" size={18} color="#818CF8" />
-                  <Text style={{ color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' }}>Душа</Text>
+                  <Text style={{ color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' }}>{t.matrix.soul}</Text>
                 </View>
                 <Text style={{ color: '#818CF8', fontSize: FontSize.md, fontWeight: '800', marginTop: 6 }}>
                   {matrixData.soul}. {soul?.name}
@@ -766,7 +788,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
                 <LinearGradient colors={['transparent', 'rgba(8,1,26,0.92)']} style={{ marginTop: -12, paddingTop: 12, paddingBottom: 8 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Ionicons name="lock-closed" size={12} color={Colors.accent} />
-                    <Text style={{ color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700' }}>Повний аналіз доступний у Premium</Text>
+                    <Text style={{ color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700' }}>{t.onboarding.ahaLockedLabel}</Text>
                   </View>
                 </LinearGradient>
               </View>
@@ -775,7 +797,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
               <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <Ionicons name="compass-outline" size={18} color="#2563EB" />
-                  <Text style={{ color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' }}>Доля</Text>
+                  <Text style={{ color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' }}>{t.matrix.destiny}</Text>
                 </View>
                 <Text style={{ color: '#60A5FA', fontSize: FontSize.md, fontWeight: '800', marginTop: 6 }}>
                   {matrixData.destiny}. {destiny?.name}
@@ -783,12 +805,13 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
                 <LinearGradient colors={['transparent', 'rgba(8,1,26,0.92)']} style={{ paddingTop: 8, paddingBottom: 8 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Ionicons name="lock-closed" size={12} color={Colors.accent} />
-                    <Text style={{ color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700' }}>Повний аналіз доступний у Premium</Text>
+                    <Text style={{ color: Colors.accent, fontSize: FontSize.xs, fontWeight: '700' }}>{t.onboarding.ahaLockedLabel}</Text>
                   </View>
                 </LinearGradient>
               </View>
 
               {/* Locked items */}
+              {/* TODO i18n: keys for "Талант від Бога"/"Фінансовий канал"/"Стосунки та кохання"/"Кармічний урок" labels and hints not in locales */}
               {[
                 { icon: 'star-outline' as const, label: 'Талант від Бога',   color: '#0D9488', hint: 'Ваш унікальний дар та як його реалізувати' },
                 { icon: 'cash-outline' as const, label: 'Фінансовий канал',  color: '#10B981', hint: 'Як розблокувати потік грошей та які професії підходять' },
@@ -815,6 +838,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
           <View style={styles.ahaCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm }}>
               <Ionicons name="sparkles" size={16} color={Colors.accent} />
+              {/* TODO i18n: key for "AI-аналіз для тебе" not in locales */}
               <Text style={{ color: Colors.accent, fontSize: FontSize.sm, fontWeight: '700' }}>AI-аналіз для тебе</Text>
             </View>
             <Text style={[styles.ahaCardText, { lineHeight: 22 }]}>{aiTeaser}</Text>
@@ -823,7 +847,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
         {aiLoading && (
           <View style={[styles.ahaCard, { alignItems: 'center', paddingVertical: Spacing.xl }]}>
             <Ionicons name="sparkles" size={24} color={Colors.accent} />
-            <Text style={{ color: Colors.textMuted, fontSize: FontSize.sm, marginTop: Spacing.sm }}>Готуємо AI-аналіз...</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: FontSize.sm, marginTop: Spacing.sm }}>{t.onboarding.ahaAnalyzing}</Text>
           </View>
         )}
       </ScrollView>
@@ -837,7 +861,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               style={[styles.bigBtn, { overflow: 'hidden' }]}
             >
-              <Text style={styles.bigBtnTextDark}>Розблокуй свою Матрицю</Text>
+              <Text style={styles.bigBtnTextDark}>{t.onboarding.ahaUnlockCta}</Text>
               <Ionicons name="arrow-forward" size={18} color="#1A0800" />
               <Animated.View
                 pointerEvents="none"
@@ -872,14 +896,15 @@ function getGoogleSignin() {
 
 // ─── Step 8: Registration ──────────────────────────────────────────────────────
 function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => void }) {
+  const { t } = useI18n();
   const { fadeIn, slideUp } = useEntrance();
   const [loadingApple,  setLoadingApple]  = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
 
   const BULLETS = [
-    { icon: 'grid-outline'  as const, label: 'Збережи свою матрицю назавжди' },
-    { icon: 'time-outline'  as const, label: 'Доступ до розкладів Таро та персональних прогнозів' },
-    { icon: 'sync-outline'  as const, label: 'Синхронізація між пристроями' },
+    { icon: 'grid-outline'  as const, label: t.onboarding.regBullet1 },
+    { icon: 'time-outline'  as const, label: t.onboarding.regBullet2 },
+    { icon: 'sync-outline'  as const, label: t.onboarding.regBullet3 },
   ];
 
   const handleAppleSignIn = async () => {
@@ -901,7 +926,7 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
       }
     } catch (e: any) {
       if (e.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Помилка', e.message ?? 'Не вдалось увійти через Apple');
+        Alert.alert(t.common.error, e.message ?? 'Не вдалось увійти через Apple');
       }
     } finally {
       setLoadingApple(false);
@@ -913,7 +938,7 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
     try {
       const gs = getGoogleSignin();
       if (!gs) {
-        Alert.alert('Помилка', 'Google Sign-In недоступний у цьому середовищі');
+        Alert.alert(t.common.error, 'Google Sign-In недоступний у цьому середовищі');
         return;
       }
       const { GoogleSignin, statusCodes } = gs;
@@ -931,7 +956,7 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
     } catch (e: any) {
       const CANCELLED = '12501';
       if (e.code !== CANCELLED && e.code !== 'SIGN_IN_CANCELLED') {
-        Alert.alert('Помилка', e.message ?? 'Не вдалось увійти через Google');
+        Alert.alert(t.common.error, e.message ?? 'Не вдалось увійти через Google');
       }
     } finally {
       setLoadingGoogle(false);
@@ -942,8 +967,8 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
     <Animated.View style={[{ flex: 1 }, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
       <View style={{ flex: 1, paddingHorizontal: Spacing.lg }}>
         <View style={styles.stepHeader}>
-          <Text style={[styles.stepTitle, { marginTop: 12 }]}>Збережи свій результат</Text>
-          <Text style={styles.stepSub}>Зареєструйся, щоб не втратити матрицю та отримати повний доступ</Text>
+          <Text style={[styles.stepTitle, { marginTop: 12 }]}>{t.onboarding.registrationTitle}</Text>
+          <Text style={styles.stepSub}>{t.onboarding.registrationSub}</Text>
         </View>
 
         <View style={{ gap: 14, marginBottom: Spacing.xl }}>
@@ -967,7 +992,7 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
             >
               <Ionicons name="logo-apple" size={20} color="#fff" />
               <Text style={styles.socialBtnText}>
-                {loadingApple ? 'Завантаження...' : 'Продовжити через Apple'}
+                {loadingApple ? t.common.loading : t.onboarding.registrationApple}
               </Text>
             </TouchableOpacity>
           )}
@@ -979,7 +1004,7 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
           >
             <Text style={{ fontSize: 18, color: '#fff', fontWeight: '700' }}>G</Text>
             <Text style={styles.socialBtnText}>
-              {loadingGoogle ? 'Завантаження...' : 'Продовжити через Google'}
+              {loadingGoogle ? t.common.loading : t.onboarding.registrationGoogle}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -988,13 +1013,13 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
             style={[styles.socialBtn, { borderColor: 'rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.05)' }]}
           >
             <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.7)" />
-            <Text style={[styles.socialBtnText, { color: 'rgba(255,255,255,0.7)' }]}>Зареєструватися через email</Text>
+            <Text style={[styles.socialBtnText, { color: 'rgba(255,255,255,0.7)' }]}>{t.onboarding.registrationEmail}</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={() => router.navigate('/auth/login' as any)} style={{ alignSelf: 'center', marginTop: Spacing.md }}>
           <Text style={{ color: Colors.primaryLight, fontSize: FontSize.sm }}>
-            Вже маю акаунт — Увійти
+            {t.onboarding.welcomeHaveAccount}
           </Text>
         </TouchableOpacity>
 

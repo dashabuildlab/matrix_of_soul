@@ -292,7 +292,7 @@ const ar: Translations = {
     deleteAccountAlert: 'حذف الحساب',
     deleteAccountMsg: 'سيتم حذف جميع بياناتك نهائياً. لا يمكن التراجع عن هذا الإجراء.',
     deleteAccountBtn: 'حذف',
-    version: 'Matrix of Destiny & Tarot v1.0.37',
+    version: 'Matrix of Destiny & Tarot v1.0.41',
   },
 
   // ── Language screen ──
@@ -888,9 +888,6 @@ const ar: Translations = {
     questionOptionalHint: 'كلما كان السؤال أكثر تحديداً كانت الإجابة أدق',
     focusHint: 'فكّر فيما يشغل بالك واضغط الزر',
     drawCards: 'وزّع البطاقات',
-    cardsRevealed: 'تم كشف البطاقات!',
-    cardsRevealing: 'جارٍ كشف البطاقات...',
-    viewInterpretation: 'عرض التفسير',
     fellReversed: 'ظهرت معكوسة',
     reversedHint: 'البطاقة المعكوسة تشير إلى حواجز داخلية أو تأخيرات أو الجانب الظلامي لطاقة البطاقة. معناها ليس عكسياً — بل أعمق ويستحق مزيداً من الاهتمام.',
     aiSummaryLabel: 'ملخص ذكي',
