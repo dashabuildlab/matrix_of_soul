@@ -18,6 +18,8 @@ import { Button } from '../../components/ui/Button';
 import { TAROT_CARDS, drawRandomCards } from '../../constants/tarotData';
 import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
+import { useI18n } from '../../lib/i18n';
+import { getCardForDisplay } from '../../lib/tarotI18n';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +38,7 @@ const SPREAD_POSITIONS = [
 
 export default function PersonScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
   const isPremium      = useAppStore((s) => s.isPremium);
   const addTarotSpread = useAppStore((s) => s.addTarotSpread);
   const [step, setStep] = useState(1); // 1=info, 2=result
@@ -89,23 +92,24 @@ export default function PersonScreen() {
     const pos = SPREAD_POSITIONS[activeCard];
     const entry = cards[activeCard];
     const isRev = entry.isReversed;
+    const l10n = getCardForDisplay(entry.card, locale);
 
     const insights: Record<string, Record<string, string>> = {
       personality: {
-        yes: `${personName} — людина з яскравою енергією ${entry.card.nameUk}. Вона несе в собі якості: ${entry.card.keywords.join(', ')}.`,
+        yes: `${personName} — людина з яскравою енергією ${l10n.name}. Вона несе в собі якості: ${l10n.keywords.join(', ')}.`,
         reversed: `Зараз ${personName} перебуває у тіньовому прояві своєї енергії. Можливо, вона закрита або переживає внутрішній конфлікт.`,
       },
       feelings: {
-        yes: `По відношенню до вас ${personName} відчуває ${entry.card.loveAdvice.toLowerCase()}`,
+        yes: `По відношенню до вас ${personName} відчуває ${l10n.loveAdvice.toLowerCase()}`,
         reversed: `${personName} може мати суперечливі почуття або приховувати їх від вас.`,
       },
       potential: {
-        yes: `Ваші стосунки мають яскравий потенціал. ${entry.card.advice}`,
-        reversed: `Стосунки потребують уваги та роботи. ${entry.card.advice}`,
+        yes: `Ваші стосунки мають яскравий потенціал. ${l10n.advice}`,
+        reversed: `Стосунки потребують уваги та роботи. ${l10n.advice}`,
       },
     };
 
-    return (insights[pos.key]?.[isRev ? 'reversed' : 'yes']) ?? entry.card.upright;
+    return (insights[pos.key]?.[isRev ? 'reversed' : 'yes']) ?? l10n.upright;
   };
 
   const hasReversed = cards.some((c) => c.isReversed);
@@ -293,7 +297,7 @@ export default function PersonScreen() {
             )}
             <View style={styles.cardDetails}>
               <Text style={styles.positionLabel}>{currentPos.label}</Text>
-              <Text style={styles.cardTitle}>{currentCard.card.nameUk}</Text>
+              <Text style={styles.cardTitle}>{getCardForDisplay(currentCard.card, locale).name}</Text>
               <Text style={styles.cardTitleEn}>{currentCard.card.name}</Text>
               {currentCard.isReversed && (
                 <View style={styles.reversedBadge}>
@@ -310,18 +314,18 @@ export default function PersonScreen() {
           </View>
 
           <Text style={styles.cardMeaning}>
-            {currentCard.isReversed ? currentCard.card.reversed : currentCard.card.upright}
+            {currentCard.isReversed ? getCardForDisplay(currentCard.card, locale).reversed : getCardForDisplay(currentCard.card, locale).upright}
           </Text>
 
           {currentPos.key === 'feelings' && (
             <View style={styles.loveBox}>
               <Text style={styles.loveTitle}>Відносини</Text>
-              <Text style={styles.loveText}>{currentCard.card.loveAdvice}</Text>
+              <Text style={styles.loveText}>{getCardForDisplay(currentCard.card, locale).loveAdvice}</Text>
             </View>
           )}
 
           <View style={styles.keywords}>
-            {currentCard.card.keywords.map((kw) => (
+            {getCardForDisplay(currentCard.card, locale).keywords.map((kw) => (
               <View key={kw} style={styles.kwBadge}>
                 <Text style={styles.kwText}>{kw}</Text>
               </View>
@@ -374,7 +378,7 @@ export default function PersonScreen() {
         style={styles.aiBtn}
         onPress={() => {
           const relLabel = RELATIONSHIP_TYPES.find((t) => t.id === relationType)?.label ?? '';
-          const ctx = `Розклад на людину "${personName}" (${relLabel}), питання: "${question}". Карти: ${cards.map((c, i) => `${SPREAD_POSITIONS[i].label} — ${c.card.nameUk}${c.isReversed ? ' (перевернута)' : ''}`).join('; ')}.`;
+          const ctx = `Розклад на людину "${personName}" (${relLabel}), питання: "${question}". Карти: ${cards.map((c, i) => `${SPREAD_POSITIONS[i].label} — ${getCardForDisplay(c.card, locale).name}${c.isReversed ? ' (перевернута)' : ''}`).join('; ')}.`;
           if (isPremium) {
             router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
           } else {

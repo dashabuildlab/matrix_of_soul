@@ -43,25 +43,11 @@ CREATE TABLE tarot_spreads (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Journal Entries
-CREATE TABLE journal_entries (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-  date DATE NOT NULL DEFAULT CURRENT_DATE,
-  mood TEXT NOT NULL CHECK (mood IN ('great', 'good', 'neutral', 'bad', 'terrible')),
-  energy_of_day INTEGER NOT NULL,
-  reflection_text TEXT,
-  tarot_card_id INTEGER,
-  ai_insight TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- Enable RLS on all tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matrices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE compatibility ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tarot_spreads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: users can only access their own data
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -77,11 +63,6 @@ CREATE POLICY "Users can insert own compatibility" ON compatibility FOR INSERT W
 
 CREATE POLICY "Users can view own spreads" ON tarot_spreads FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own spreads" ON tarot_spreads FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can view own journal" ON journal_entries FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own journal" ON journal_entries FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own journal" ON journal_entries FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own journal" ON journal_entries FOR DELETE USING (auth.uid() = user_id);
 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

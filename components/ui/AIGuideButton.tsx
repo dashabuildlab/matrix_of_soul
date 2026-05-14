@@ -7,6 +7,7 @@ import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { useI18n } from '@/lib/i18n';
 import { useAppStore } from '@/stores/useAppStore';
 import { TAROT_CARDS } from '@/lib/staticData';
+import { getCardForDisplay } from '@/lib/tarotI18n';
 import { AIConsentModal } from './AIConsentModal';
 
 interface AIGuideButtonProps {
@@ -69,9 +70,9 @@ export function AIGuideButton({ context, cards, reversed, question }: AIGuideBut
     if (context === 'tarot' && cards?.length) {
       const cardDescs = cards.map((id, i) => {
         const tc = TAROT_CARDS.find((c) => c.id === id);
-        const name = isUk
-          ? (tc?.nameUk ?? tc?.name ?? `Карта ${id}`)
-          : (tc?.name ?? `Card ${id}`);
+        const name = tc
+          ? getCardForDisplay(tc, locale).name
+          : (isUk ? `Карта ${id}` : `Card ${id}`);
         const rev = reversed?.[i] ? (isUk ? ' (перевернута)' : ' (reversed)') : '';
         return `${name}${rev}`;
       });

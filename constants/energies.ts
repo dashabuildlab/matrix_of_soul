@@ -7,6 +7,12 @@ export interface Energy {
   positive: string;
   negative: string;
   advice: string;
+  // Legacy English duplicates (lib/fallbackData.ts) — optional, retired in favour of i18n
+  planetEn?: string;
+  keywordsEn?: string[];
+  positiveEn?: string;
+  negativeEn?: string;
+  adviceEn?: string;
 }
 
 export const ENERGIES: Energy[] = [

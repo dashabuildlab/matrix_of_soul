@@ -40,6 +40,10 @@ yarn-error.*
 credentials.json
 deploy_key
 deploy_key.pub
+api/serviceAccountKey.json
+**/serviceAccountKey.json
+GoogleService-Info.plist
+android/app/google-services.json
 
 # ── IDE ───────────────────────────────────────────────────────────────────────
 .idea/

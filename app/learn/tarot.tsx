@@ -18,6 +18,8 @@ import { Card } from '../../components/ui/Card';
 import { TAROT_CARDS } from '../../lib/staticData';
 import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
+import { getCardForDisplay } from '../../lib/tarotI18n';
+import { useI18n } from '../../lib/i18n';
 
 const { width } = Dimensions.get('window');
 const CARD_COL = 3;
@@ -34,30 +36,32 @@ interface QuizQuestion {
 
 // ─── Question generators ──────────────────────────────────────────────────────
 
-function generateKeywordQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
+function generateKeywordQuestion(cards: typeof TAROT_CARDS, locale: string): QuizQuestion {
   const card = cards[Math.floor(Math.random() * cards.length)];
-  const keyword = card.keywords[Math.floor(Math.random() * card.keywords.length)];
+  const cardL10n = getCardForDisplay(card, locale);
   const wrongs = cards
     .filter((c) => c.id !== card.id)
     .sort(() => Math.random() - 0.5)
     .slice(0, 3)
-    .map((c) => c.nameUk);
-  const options = [card.nameUk, ...wrongs].sort(() => Math.random() - 0.5);
-  return { card, options, correctIndex: options.indexOf(card.nameUk), type: 'keyword' };
+    .map((c) => getCardForDisplay(c, locale).name);
+  const options = [cardL10n.name, ...wrongs].sort(() => Math.random() - 0.5);
+  return { card, options, correctIndex: options.indexOf(cardL10n.name), type: 'keyword' };
 }
 
-function generateNameQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
+function generateNameQuestion(cards: typeof TAROT_CARDS, locale: string): QuizQuestion {
   const card = cards[Math.floor(Math.random() * cards.length)];
+  const cardL10n = getCardForDisplay(card, locale);
   const wrongs = cards
     .filter((c) => c.id !== card.id)
     .sort(() => Math.random() - 0.5)
     .slice(0, 3)
-    .map((c) => c.keywords[0]);
-  const options = [card.keywords[0], ...wrongs].sort(() => Math.random() - 0.5);
-  return { card, options, correctIndex: options.indexOf(card.keywords[0]), type: 'name' };
+    .map((c) => getCardForDisplay(c, locale).keywords[0] ?? '');
+  const firstKw = cardL10n.keywords[0] ?? '';
+  const options = [firstKw, ...wrongs].sort(() => Math.random() - 0.5);
+  return { card, options, correctIndex: options.indexOf(firstKw), type: 'name' };
 }
 
-function generateYesNoQuestion(cards: typeof TAROT_CARDS): QuizQuestion {
+function generateYesNoQuestion(cards: typeof TAROT_CARDS, _locale: string): QuizQuestion {
   const card = cards[Math.floor(Math.random() * cards.length)];
   const options = ['Так', 'Ні', 'Можливо'];
   const correctAnswer = card.yesNo === 'yes' ? 'Так' : card.yesNo === 'no' ? 'Ні' : 'Можливо';
@@ -81,6 +85,7 @@ const INSTRUCTIONS: Record<string, string> = {
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function TarotLearnScreen() {
+  const { locale } = useI18n();
   const [mode, setMode] = useState<GameMode>('browse');
   const [currentQuestion, setCurrentQuestion] = useState<QuizQuestion | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -145,10 +150,10 @@ export default function TarotLearnScreen() {
   // ── Quiz logic ──
   const generateQuestion = (type: GameMode): QuizQuestion => {
     switch (type) {
-      case 'quiz_keyword': return generateKeywordQuestion(TAROT_CARDS);
-      case 'quiz_name':    return generateNameQuestion(TAROT_CARDS);
-      case 'quiz_yesno':   return generateYesNoQuestion(TAROT_CARDS);
-      default:             return generateKeywordQuestion(TAROT_CARDS);
+      case 'quiz_keyword': return generateKeywordQuestion(TAROT_CARDS, locale);
+      case 'quiz_name':    return generateNameQuestion(TAROT_CARDS, locale);
+      case 'quiz_yesno':   return generateYesNoQuestion(TAROT_CARDS, locale);
+      default:             return generateKeywordQuestion(TAROT_CARDS, locale);
     }
   };
 
@@ -198,13 +203,14 @@ export default function TarotLearnScreen() {
 
   const getQuestion = () => {
     if (!currentQuestion) return '';
+    const l10n = getCardForDisplay(currentQuestion.card, locale);
     switch (currentQuestion.type) {
       case 'keyword':
-        return `Яка карта пов'язана з ключовим словом "${currentQuestion.card.keywords[0]}"?`;
+        return `Яка карта пов'язана з ключовим словом "${l10n.keywords[0] ?? ''}"?`;
       case 'name':
-        return `Яке ключове слово відповідає карті "${currentQuestion.card.nameUk}"?`;
+        return `Яке ключове слово відповідає карті "${l10n.name}"?`;
       case 'yesno':
-        return `Яку відповідь дає карта "${currentQuestion.card.nameUk}" на пряме питання?`;
+        return `Яку відповідь дає карта "${l10n.name}" на пряме питання?`;
     }
   };
 
@@ -264,7 +270,7 @@ export default function TarotLearnScreen() {
                     <Text style={styles.cardGridNum}>{card.id}</Text>
                   </View>
                 )}
-                <Text style={styles.cardGridName} numberOfLines={2}>{card.nameUk}</Text>
+                <Text style={styles.cardGridName} numberOfLines={2}>{getCardForDisplay(card, locale).name}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -300,10 +306,10 @@ export default function TarotLearnScreen() {
                       </View>
                     )}
                     <View style={styles.modalCardInfo}>
-                      <Text style={styles.modalCardName}>{encyclopediaCard.nameUk}</Text>
+                      <Text style={styles.modalCardName}>{getCardForDisplay(encyclopediaCard, locale).name}</Text>
                       <Text style={styles.modalCardNameEn}>{encyclopediaCard.name}</Text>
                       <View style={styles.keywordWrap}>
-                        {encyclopediaCard.keywords.map((kw) => (
+                        {getCardForDisplay(encyclopediaCard, locale).keywords.map((kw) => (
                           <View key={kw} style={styles.kwBadge}>
                             <Text style={styles.kwText}>{kw}</Text>
                           </View>
@@ -317,21 +323,21 @@ export default function TarotLearnScreen() {
                       <Ionicons name="arrow-up-circle-outline" size={14} color={Colors.primaryLight} />
                       <Text style={styles.modalMeaningLabel}>Пряме значення</Text>
                     </View>
-                    <Text style={styles.modalMeaningText}>{encyclopediaCard.upright}</Text>
+                    <Text style={styles.modalMeaningText}>{getCardForDisplay(encyclopediaCard, locale).upright}</Text>
                   </View>
                   <View style={styles.modalMeaning}>
                     <View style={styles.modalMeaningLabelRow}>
                       <Ionicons name="sync-outline" size={14} color={Colors.primaryLight} />
                       <Text style={styles.modalMeaningLabel}>Перевернута</Text>
                     </View>
-                    <Text style={styles.modalMeaningText}>{encyclopediaCard.reversed}</Text>
+                    <Text style={styles.modalMeaningText}>{getCardForDisplay(encyclopediaCard, locale).reversed}</Text>
                   </View>
                   <View style={styles.modalMeaning}>
                     <View style={styles.modalMeaningLabelRow}>
                       <Ionicons name="bulb-outline" size={14} color={Colors.accent} />
                       <Text style={[styles.modalMeaningLabel, { color: Colors.accent }]}>Порада</Text>
                     </View>
-                    <Text style={styles.modalMeaningText}>{encyclopediaCard.advice}</Text>
+                    <Text style={styles.modalMeaningText}>{getCardForDisplay(encyclopediaCard, locale).advice}</Text>
                   </View>
                   <View style={{ height: 32 }} />
                 </ScrollView>
@@ -536,7 +542,7 @@ export default function TarotLearnScreen() {
                   </Text>
                 </View>
                 <Text style={styles.explanationText}>
-                  {currentQuestion.card.nameUk} ({currentQuestion.card.name}) — {currentQuestion.card.upright}
+                  {getCardForDisplay(currentQuestion.card, locale).name} ({currentQuestion.card.name}) — {getCardForDisplay(currentQuestion.card, locale).upright}
                 </Text>
                 <TouchableOpacity style={styles.nextBtn} onPress={nextQuestion}>
                   <Text style={styles.nextBtnText}>

@@ -19,6 +19,8 @@ import { Button } from '../../components/ui/Button';
 import { TAROT_CARDS } from '../../constants/tarotData';
 import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
+import { useI18n } from '../../lib/i18n';
+import { getCardForDisplay } from '../../lib/tarotI18n';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +50,7 @@ const ANSWER_CONFIG = {
 
 export default function YesNoScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
   const isPremium      = useAppStore((s) => s.isPremium);
   const addTarotSpread = useAppStore((s) => s.addTarotSpread);
   const [question, setQuestion] = useState('');
@@ -251,7 +254,7 @@ export default function YesNoScreen() {
                 </View>
               )}
               <View style={styles.cardInfo}>
-                <Text style={styles.cardName}>{result.card.nameUk}</Text>
+                <Text style={styles.cardName}>{getCardForDisplay(result.card, locale).name}</Text>
                 <Text style={styles.cardNameEn}>{result.card.name}</Text>
                 {result.isReversed && (
                   <View style={styles.reversedBadge}>
@@ -260,25 +263,25 @@ export default function YesNoScreen() {
                   </View>
                 )}
                 <View style={styles.cardMeta}>
-                  <Text style={styles.cardMetaText}>{result.card.element}</Text>
+                  <Text style={styles.cardMetaText}>{getCardForDisplay(result.card, locale).element}</Text>
                   <Text style={styles.cardMetaDot}>·</Text>
-                  <Text style={styles.cardMetaText}>{result.card.planet}</Text>
+                  <Text style={styles.cardMetaText}>{getCardForDisplay(result.card, locale).planet}</Text>
                 </View>
               </View>
             </View>
 
             <Text style={styles.cardMeaning}>
-              {result.isReversed ? result.card.reversed : result.card.upright}
+              {result.isReversed ? getCardForDisplay(result.card, locale).reversed : getCardForDisplay(result.card, locale).upright}
             </Text>
 
             <View style={styles.adviceBox}>
               <Text style={styles.adviceTitle}>Порада карти:</Text>
-              <Text style={styles.adviceText}>{result.card.advice}</Text>
+              <Text style={styles.adviceText}>{getCardForDisplay(result.card, locale).advice}</Text>
             </View>
 
             {/* Keywords */}
             <View style={styles.keywords}>
-              {result.card.keywords.map((kw) => (
+              {getCardForDisplay(result.card, locale).keywords.map((kw) => (
                 <View key={kw} style={styles.keywordBadge}>
                   <Text style={styles.keywordText}>{kw}</Text>
                 </View>
@@ -310,7 +313,7 @@ export default function YesNoScreen() {
           <TouchableOpacity
             style={styles.aiBtn}
             onPress={() => {
-              const ctx = `Розклад "Так чи Ні", питання: "${question}". Карта: ${result.card.nameUk}${result.isReversed ? ' (перевернута)' : ''}. Відповідь: ${answer === 'yes' ? 'ТАК' : answer === 'no' ? 'НІ' : 'МОЖЛИВО'}.`;
+              const ctx = `Розклад "Так чи Ні", питання: "${question}". Карта: ${getCardForDisplay(result.card, locale).name}${result.isReversed ? ' (перевернута)' : ''}. Відповідь: ${answer === 'yes' ? 'ТАК' : answer === 'no' ? 'НІ' : 'МОЖЛИВО'}.`;
               if (isPremium) {
                 router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
               } else {

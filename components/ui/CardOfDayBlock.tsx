@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { getTarotImageSource } from '@/constants/tarotImages';
 import type { TarotCard } from '@/constants/tarotData';
 import { Spacing, FontSize, BorderRadius } from '@/constants/theme';
+import { getCardForDisplay } from '@/lib/tarotI18n';
 
 const { width } = Dimensions.get('window');
 const CARD_W  = Math.min(width * 0.50, 215);
@@ -23,9 +24,10 @@ export function CardOfDayBlock({ card, isUk }: Props) {
   const opened  = useRef(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const cardName = isUk ? card.nameUk : card.name;
-  const keywords = (isUk ? card.keywords : card.keywordsEn ?? card.keywords).slice(0, 3).join(' · ');
-  const advice   = isUk ? card.advice  : card.adviceEn  ?? card.advice;
+  const l10n = getCardForDisplay(card, isUk ? 'uk' : 'en');
+  const cardName = l10n.name;
+  const keywords = l10n.keywords.slice(0, 3).join(' · ');
+  const advice   = l10n.advice;
 
   // ── Animation values (all native driver) ─────────────────────────────
   const glowOpacity   = useRef(new Animated.Value(0.55)).current;

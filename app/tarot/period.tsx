@@ -18,6 +18,8 @@ import { Button } from '../../components/ui/Button';
 import { TAROT_CARDS, drawRandomCards } from '../../constants/tarotData';
 import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
+import { useI18n } from '../../lib/i18n';
+import { getCardForDisplay } from '../../lib/tarotI18n';
 
 const { width } = Dimensions.get('window');
 
@@ -70,6 +72,7 @@ const THEMES = [
 
 export default function PeriodScreen() {
   const router = useRouter();
+  const { locale } = useI18n();
   const isPremium      = useAppStore((s) => s.isPremium);
   const addTarotSpread = useAppStore((s) => s.addTarotSpread);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
@@ -118,10 +121,11 @@ export default function PeriodScreen() {
   };
 
   const getThemeInterpretation = (card: (typeof TAROT_CARDS)[0], isReversed: boolean) => {
-    const base = isReversed ? card.reversed : card.upright;
+    const l10n = getCardForDisplay(card, locale);
+    const base = isReversed ? l10n.reversed : l10n.upright;
     switch (selectedTheme) {
-      case 'love': return card.loveAdvice;
-      case 'career': return card.careerAdvice;
+      case 'love': return l10n.loveAdvice;
+      case 'career': return l10n.careerAdvice;
       default: return base;
     }
   };
@@ -324,7 +328,7 @@ export default function PeriodScreen() {
                   <Text style={styles.positionLabel}>
                     {period.positions[activeCard]}
                   </Text>
-                  <Text style={styles.cardName}>{cards[activeCard].card.nameUk}</Text>
+                  <Text style={styles.cardName}>{getCardForDisplay(cards[activeCard].card, locale).name}</Text>
                   <Text style={styles.cardNameEn}>{cards[activeCard].card.name}</Text>
                   {cards[activeCard].isReversed && (
                     <View style={styles.reversedBadge}>
@@ -333,9 +337,9 @@ export default function PeriodScreen() {
                     </View>
                   )}
                   <View style={styles.elementRow}>
-                    <Text style={styles.elementText}>{cards[activeCard].card.element}</Text>
+                    <Text style={styles.elementText}>{getCardForDisplay(cards[activeCard].card, locale).element}</Text>
                     <Text style={styles.elementDot}>·</Text>
-                    <Text style={styles.elementText}>{cards[activeCard].card.planet}</Text>
+                    <Text style={styles.elementText}>{getCardForDisplay(cards[activeCard].card, locale).planet}</Text>
                   </View>
                 </View>
               </View>
@@ -354,11 +358,11 @@ export default function PeriodScreen() {
                   <Ionicons name="bulb-outline" size={14} color={Colors.accent} />
                   <Text style={styles.adviceTitle}>Порада</Text>
                 </View>
-                <Text style={styles.adviceText}>{cards[activeCard].card.advice}</Text>
+                <Text style={styles.adviceText}>{getCardForDisplay(cards[activeCard].card, locale).advice}</Text>
               </View>
 
               <View style={styles.keywords}>
-                {cards[activeCard].card.keywords.map((kw) => (
+                {getCardForDisplay(cards[activeCard].card, locale).keywords.map((kw) => (
                   <View key={kw} style={styles.kwBadge}>
                     <Text style={styles.kwText}>{kw}</Text>
                   </View>
@@ -414,7 +418,7 @@ export default function PeriodScreen() {
             style={styles.aiBtn}
             onPress={() => {
               const themeName = THEMES.find((t) => t.id === selectedTheme)?.label ?? '';
-              const ctx = `Прогноз Таро на ${period.label} (${themeName}), питання: "${question}". Карти: ${cards.map((c, i) => `${period.positions[i]} — ${c.card.nameUk}${c.isReversed ? ' (перевернута)' : ''}`).join('; ')}.`;
+              const ctx = `Прогноз Таро на ${period.label} (${themeName}), питання: "${question}". Карти: ${cards.map((c, i) => `${period.positions[i]} — ${getCardForDisplay(c.card, locale).name}${c.isReversed ? ' (перевернута)' : ''}`).join('; ')}.`;
               if (isPremium) {
                 router.push({ pathname: '/ai/chat', params: { dailyContext: ctx } } as any);
               } else {

@@ -292,7 +292,7 @@ const ptBR: Translations = {
     deleteAccountAlert: 'Excluir conta',
     deleteAccountMsg: 'Todos os seus dados serão excluídos permanentemente. Esta ação não pode ser desfeita.',
     deleteAccountBtn: 'Excluir',
-    version: 'Matrix of Destiny & Tarot v1.0.41',
+    version: 'Matrix of Destiny & Tarot v1.0.42',
   },
 
   // ── Language screen ──

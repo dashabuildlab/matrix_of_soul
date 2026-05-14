@@ -2,7 +2,7 @@
   "expo": {
     "name": "Matrix of Soul",
     "slug": "matrix-of-soul",
-    "version": "1.0.41",
+    "version": "1.0.42",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.matrixofsoul.myapp-",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "41",
+      "buildNumber": "42",
       "minimumOsVersion": "16.0",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Ми використовуємо дані для покращення досвіду та персоналізації контенту в межах застосунку.",
@@ -51,7 +51,7 @@
         "backgroundColor": "#0A0A1A"
       },
       "package": "com.matrixofsoul.app",
-      "versionCode": 41,
+      "versionCode": 42,
       "googleServicesFile": "./google-services.json"
     },
     "web": {

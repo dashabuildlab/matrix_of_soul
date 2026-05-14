@@ -120,7 +120,7 @@ export function WebSidebar() {
         <View style={styles.bottomDivider} />
         <View style={styles.bottomInfo}>
           <Text style={styles.bottomAppName}>Matrix of Soul</Text>
-          <Text style={styles.bottomVersion}>v1.0.41</Text>
+          <Text style={styles.bottomVersion}>v1.0.42</Text>
         </View>
         <Text style={styles.sidebarBottomDec}>✦  ·  ✦  ·  ✦</Text>
       </View>

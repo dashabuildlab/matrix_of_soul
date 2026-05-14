@@ -13,6 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../constants/theme';
 import { Card } from '../components/ui/Card';
 import { TAROT_CARDS, drawRandomCards } from '../constants/tarotData';
+import { getTarotCardL10n } from '../lib/tarotI18n';
+import { useI18n } from '../lib/i18n';
 import { useAppStore } from '../stores/useAppStore';
 import { getEnergyById } from '../constants/energies';
 import { getDailyEnergy } from '../lib/matrix-calc';
@@ -39,8 +41,10 @@ const AFFIRMATIONS = [
 ];
 
 export default function ShareScreen() {
+  const { locale } = useI18n();
   const [selectedType, setSelectedType] = useState('energy');
   const [tarotCard] = useState(() => drawRandomCards(1)[0]);
+  const tarotL10n = getTarotCardL10n(tarotCard.id, locale);
   const [affirmation] = useState(() => AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
   const userName = useAppStore((s) => s.userName);
   const dailyEnergyId = getDailyEnergy();
@@ -55,7 +59,7 @@ export default function ShareScreen() {
         message = `✨ Енергія дня: ${dailyEnergyId}. ${energy?.name}\n\n"${energy?.advice}"\n\n🔮 Matrix of Soul App`;
         break;
       case 'tarot':
-        message = `🃏 Карта дня: ${tarotCard.nameUk}\n\n${tarotCard.upright}\n\n💡 ${tarotCard.advice}\n\n🔮 Matrix of Soul App`;
+        message = `🃏 ${tarotL10n.name}\n\n${tarotL10n.upright}\n\n💡 ${tarotL10n.advice}\n\n🔮 Matrix of Soul App`;
         break;
       case 'affirmation':
         message = `💫 Афірмація дня:\n\n"${affirmation}"\n\n🔮 Matrix of Soul App`;
@@ -104,11 +108,11 @@ export default function ShareScreen() {
               <Text style={styles.tarotCardNum}>{tarotCard.id}</Text>
               <Ionicons name="star" size={24} color={Colors.accent} />
             </View>
-            <Text style={styles.shareCardTitle}>{tarotCard.nameUk}</Text>
-            <Text style={styles.shareCardSubtitle}>{tarotCard.name} · {tarotCard.element}</Text>
-            <Text style={styles.shareCardText}>{tarotCard.advice}</Text>
+            <Text style={styles.shareCardTitle}>{tarotL10n.name}</Text>
+            <Text style={styles.shareCardSubtitle}>{tarotCard.name} · {tarotL10n.element}</Text>
+            <Text style={styles.shareCardText}>{tarotL10n.advice}</Text>
             <View style={styles.shareCardKeywords}>
-              {tarotCard.keywords.slice(0, 3).map((kw) => (
+              {tarotL10n.keywords.slice(0, 3).map((kw) => (
                 <View key={kw} style={styles.shareKeyword}>
                   <Text style={styles.shareKeywordText}>{kw}</Text>
                 </View>

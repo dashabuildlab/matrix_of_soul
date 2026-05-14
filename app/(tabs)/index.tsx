@@ -24,6 +24,7 @@ import { MatrixDiagram } from '../../components/matrix/MatrixDiagram';
 import { getDailyEnergy, calculateMatrix } from '../../lib/matrix-calc';
 import { getEnergyById } from '../../constants/energies';
 import { TAROT_CARDS } from '../../constants/tarotData';
+import { getTarotCardL10n } from '../../lib/tarotI18n';
 import { TAROT_IMAGES } from '../../constants/tarotImages';
 import { useAppStore } from '../../stores/useAppStore';
 import { GIFT_DIAMONDS } from '../../lib/notifications';
@@ -45,9 +46,11 @@ function getDailyCard() {
 
 // ── Card flip component ───────────────────────────────────────────────────────
 function DailyCardFlip() {
+  const { locale, t } = useI18n();
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [revealed, setRevealed] = useState(false);
   const card = getDailyCard();
+  const cardL10n = getTarotCardL10n(card.id, locale);
 
   const handleReveal = () => {
     if (revealed) return;
@@ -60,9 +63,9 @@ function DailyCardFlip() {
         state.addDayCardEntry({
           date: todayStr,
           cardId: card.id,
-          cardName: card.nameUk,
-          cardMeaning: card.upright.slice(0, 220),
-          keywords: card.keywords.slice(0, 5),
+          cardName: cardL10n.name,
+          cardMeaning: cardL10n.upright.slice(0, 220),
+          keywords: cardL10n.keywords.slice(0, 5),
         });
       }
     });
@@ -76,7 +79,7 @@ function DailyCardFlip() {
 
   return (
     <View style={cardStyles.container}>
-      <Text style={cardStyles.sectionTitle}>Карта Дня</Text>
+      <Text style={cardStyles.sectionTitle}>{t.today.cardOfDay}</Text>
       <View style={cardStyles.flipWrapper}>
         <Animated.View style={[cardStyles.cardFace, { transform: [{ perspective: 1200 }, { rotateY: frontRotate }], opacity: frontOpacity }]}>
           <LinearGradient colors={['#1A1040', '#2D1B69', '#4C1D95']} style={cardStyles.cardBack} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
@@ -100,19 +103,21 @@ function DailyCardFlip() {
         <TouchableOpacity activeOpacity={0.8} onPress={handleReveal} style={cardStyles.revealBtn}>
           <LinearGradient colors={['#4C1D95', '#7C3AED']} style={cardStyles.revealGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             <Ionicons name="sparkles" size={18} color={Colors.accent} />
-            <Text style={cardStyles.revealBtnText}>Відкрити карту</Text>
+            <Text style={cardStyles.revealBtnText}>{t.tarotExtra.revealCards}</Text>
           </LinearGradient>
         </TouchableOpacity>
       )}
       {revealed && (
         <Card style={cardStyles.infoCard}>
           <View style={cardStyles.infoHeader}>
-            <Text style={cardStyles.cardName}>{card.nameUk}</Text>
-            <Text style={cardStyles.cardNameEn}>{card.name}</Text>
+            <Text style={cardStyles.cardName}>{cardL10n.name}</Text>
+            {locale !== 'en' && locale !== 'en-GB' && (
+              <Text style={cardStyles.cardNameEn}>{card.name}</Text>
+            )}
           </View>
-          <Text style={cardStyles.cardReading} numberOfLines={5}>{card.upright}</Text>
+          <Text style={cardStyles.cardReading} numberOfLines={5}>{cardL10n.upright}</Text>
           <View style={cardStyles.keywordsRow}>
-            {card.keywords.slice(0, 3).map((kw) => (
+            {cardL10n.keywords.slice(0, 3).map((kw) => (
               <View key={kw} style={cardStyles.keyword}>
                 <Text style={cardStyles.keywordText}>{kw}</Text>
               </View>
