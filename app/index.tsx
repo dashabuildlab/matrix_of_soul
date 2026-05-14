@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { supabase } from '../lib/supabase';
+import { getCurrentUser } from '../lib/firebaseAuth';
 import { Colors } from '../constants/theme';
 
 export default function Index() {
@@ -30,8 +30,8 @@ export default function Index() {
         }
 
         // 3. Route by auth state
-        const { data: { session } } = await supabase.auth.getSession();
-        setRoute(session ? '/(tabs)/matrix' : '/auth/login');
+        const user = getCurrentUser();
+        setRoute(user ? '/(tabs)/matrix' : '/auth/login');
       } catch {
         setRoute('/welcome');
       }

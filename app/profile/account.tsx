@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '@/constants/theme';
 import { useAppStore } from '@/stores/useAppStore';
 import { useI18n } from '@/lib/i18n';
-import { supabase } from '@/lib/supabase';
+import { signOut } from '@/lib/firebaseAuth';
 
 export default function AccountScreen() {
   const { t, locale } = useI18n();
@@ -42,9 +42,7 @@ export default function AccountScreen() {
         onPress: async () => {
           setDeleting(true);
           try {
-            const { error } = await supabase.functions.invoke('delete-account');
-            if (error) throw error;
-            await supabase.auth.signOut();
+            await signOut();
             useAppStore.setState({
               isAuthenticated: false, userId: null,
               userName: null, userBirthDate: null,
@@ -53,7 +51,6 @@ export default function AccountScreen() {
             });
             router.replace('/auth/login');
           } catch {
-            await supabase.auth.signOut();
             useAppStore.setState({ isAuthenticated: false, userId: null });
             router.replace('/auth/login');
           } finally {

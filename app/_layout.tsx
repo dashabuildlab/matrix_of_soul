@@ -9,10 +9,9 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { Colors } from '../constants/theme';
 import { initializePurchases } from '../lib/purchases';
-import { supabase } from '../lib/supabase';
+import { onAuthStateChanged } from '../lib/firebaseAuth';
 import { initializeNotifications } from '../lib/notifications';
 import { useAppStore, Achievement } from '../stores/useAppStore';
-import type { Session } from '@supabase/supabase-js';
 import { I18nProvider, useI18n } from '../lib/i18n';
 
 // Keep the native splash visible until icon fonts have loaded — prevents
@@ -120,7 +119,7 @@ function AppInit() {
   // useFonts() returns [loaded, error]. We block render until loaded.
   const [fontsLoaded, fontsError] = useFonts({ ...Ionicons.font });
 
-  const [session, setSession] = useState<Session | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<{ uid: string } | null>(null);
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [achievementToast, setAchievementToast] = useState<Achievement | null>(null);
@@ -151,21 +150,29 @@ function AppInit() {
         setOnboardingDone(false);
       }
 
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        // Always initialize Purchases — use userId when available, anonymous otherwise
-        initializePurchases(session?.user.id ?? null);
-        if (session) {
-          useAppStore.setState({ isAuthenticated: true, userId: session.user.id });
+      setLoading(false);
+    };
 
+    init();
+
+    // Firebase auth state listener — fires immediately with current user,
+    // then on every sign-in / sign-out event.
+    const firstCall = { done: false };
+    const unsubFirebase = onAuthStateChanged((user) => {
+      setFirebaseUser(user);
+      useAppStore.setState({ isAuthenticated: !!user, userId: user?.uid ?? null });
+      initializePurchases(user?.uid ?? null);
+
+      // On the very first callback (app startup) run streak / achievement checks
+      if (!firstCall.done) {
+        firstCall.done = true;
+        if (user) {
           const result = checkAndUpdateStreak();
           if (result.isNewDay) {
             if (!result.streakBroken && result.newStreak > 1) {
               const streakTimer = setTimeout(() => setStreakToast(result.newStreak), 800);
               timers.push(streakTimer);
             }
-            // Show all unlocked achievements sequentially with 3s gap
             const delay = result.newStreak > 1 ? 4500 : 800;
             const achTimer = setTimeout(() => {
               const newAchievements = checkAchievements();
@@ -187,19 +194,7 @@ function AppInit() {
             });
           }
         }
-      } catch {
-        // Session unavailable — user will be routed to login
-      } finally {
-        setLoading(false);
       }
-    };
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      useAppStore.setState({ isAuthenticated: !!session, userId: session?.user.id ?? null });
-      if (session) initializePurchases(session.user.id);
     });
 
     // Handle push notification taps
@@ -227,7 +222,7 @@ function AppInit() {
 
     return () => {
       timers.forEach(clearTimeout);
-      subscription.unsubscribe();
+      unsubFirebase();
       notifSub?.remove();
     };
   }, []);
@@ -268,9 +263,9 @@ function AppInit() {
       }}>
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} redirect={onboardingDone && storeOnboardingCompleted} />
-        <Stack.Screen name="auth/login" options={{ headerShown: false }} redirect={!!session || storeAuthenticated} />
+        <Stack.Screen name="auth/login" options={{ headerShown: false }} redirect={!!firebaseUser || storeAuthenticated} />
         <Stack.Screen name="auth/register" options={{ title: '' }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} redirect={!session && !storeAuthenticated} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} redirect={!firebaseUser && !storeAuthenticated} />
 
         {/* Matrix */}
         <Stack.Screen name="matrix/create" options={{ title: '', presentation: 'modal' }} />

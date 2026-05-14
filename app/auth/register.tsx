@@ -17,7 +17,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Button } from '../../components/ui/Button';
-import { supabase } from '../../lib/supabase';
+import { registerWithEmail } from '../../lib/firebaseAuth';
+import { getAuthErrorMessage } from '../../lib/firebaseAuthErrors';
 import { useAppStore } from '../../stores/useAppStore';
 
 // ── Date wheel data ──────────────────────────────────────────────────────────
@@ -172,36 +173,13 @@ export default function RegisterScreen() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { data: { name: name.trim() } },
-      });
-
-      if (error) {
-        Alert.alert('Помилка реєстрації', error.message ?? 'Невідома помилка');
-        return;
-      }
-
+      const user = await registerWithEmail(email.trim(), password);
       setUserProfile(name.trim(), birthDateStr);
-
-      if (data.user) {
-        await supabase
-          .from('profiles')
-          .update({ name: name.trim(), birth_date: birthDateStr })
-          .eq('id', data.user.id);
-      }
-
-      if (!data.session) {
-        Alert.alert(
-          'Перевірте пошту',
-          'Ми надіслали лист для підтвердження на ' + email.trim(),
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Помилка мережі. Перевірте з\'єднання.';
-      Alert.alert('Помилка', msg);
+      useAppStore.setState({ isAuthenticated: true, userId: user.uid });
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      const msg = getAuthErrorMessage(err?.code ?? '', true) || err?.message || 'Помилка мережі. Перевірте з\'єднання.';
+      Alert.alert('Помилка реєстрації', msg);
     } finally {
       setLoading(false);
     }

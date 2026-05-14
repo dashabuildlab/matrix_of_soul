@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Card } from '../../components/ui/Card';
 import { useAppStore } from '../../stores/useAppStore';
-import { supabase } from '../../lib/supabase';
+import { signOut } from '../../lib/firebaseAuth';
 
 
 const { width } = Dimensions.get('window');
@@ -219,7 +219,8 @@ export default function ProfileScreen() {
               text: 'Вийти',
               style: 'destructive',
               onPress: async () => {
-                await supabase.auth.signOut();
+                await signOut();
+                useAppStore.setState({ isAuthenticated: false, userId: null });
                 router.replace('/auth/login');
               },
             },

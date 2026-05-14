@@ -6,10 +6,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../constants/theme';
 import { Button } from '../../components/ui/Button';
-import { supabase } from '../../lib/supabase';
+import { loginWithEmail, signInWithGoogle, signInWithApple } from '../../lib/firebaseAuth';
+import { getAuthErrorMessage } from '../../lib/firebaseAuthErrors';
 import { useAppStore } from '../../stores/useAppStore';
 
 const { width, height } = Dimensions.get('window');
@@ -21,22 +21,6 @@ const DOTS = Array.from({ length: 18 }, (_, i) => ({
   o: 0.07 + (i % 4) * 0.025,
 }));
 
-// Lazy-load GoogleSignin so the native module isn't required at parse time.
-// This prevents crashes in Expo Go where RNGoogleSignin is not linked.
-function getGoogleSignin() {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
-    GoogleSignin.configure({
-      webClientId: '113578995852-gphg055rh0mopfnub9iosj9d7crfujh1.apps.googleusercontent.com',
-      iosClientId: '113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu.apps.googleusercontent.com',
-      scopes: ['email', 'profile'],
-    });
-    return { GoogleSignin, statusCodes };
-  } catch {
-    return null;
-  }
-}
 
 export default function LoginScreen() {
   const [email, setEmail]           = useState('');
@@ -81,11 +65,12 @@ export default function LoginScreen() {
     }
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) Alert.alert('Помилка входу', error.message ?? 'Невідома помилка');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Помилка мережі. Перевірте з\'єднання.';
-      Alert.alert('Помилка', msg);
+      const user = await loginWithEmail(email.trim(), password);
+      useAppStore.setState({ isAuthenticated: true, userId: user.uid });
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      const msg = getAuthErrorMessage(err?.code ?? '', true) || err?.message || 'Помилка мережі. Перевірте з\'єднання.';
+      Alert.alert('Помилка входу', msg);
     } finally {
       setLoading(false);
     }
@@ -94,18 +79,10 @@ export default function LoginScreen() {
   const handleAppleSignIn = async () => {
     setLoadingApple(true);
     try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      if (credential.identityToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'apple',
-          token: credential.identityToken,
-        });
-        if (error) throw error;
+      const user = await signInWithApple();
+      if (user) {
+        useAppStore.setState({ isAuthenticated: true, userId: user.uid });
+        router.replace('/(tabs)');
       }
     } catch (e: any) {
       if (e.code !== 'ERR_REQUEST_CANCELED') {
@@ -119,21 +96,10 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setLoadingGoogle(true);
     try {
-      const gs = getGoogleSignin();
-      if (!gs) {
-        Alert.alert('Помилка', 'Google Sign-In недоступний у цьому середовищі');
-        return;
-      }
-      const { GoogleSignin, statusCodes } = gs;
-      await GoogleSignin.hasPlayServices();
-      await GoogleSignin.signIn();
-      const { idToken } = await GoogleSignin.getTokens();
-      if (idToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: idToken,
-        });
-        if (error) throw error;
+      const user = await signInWithGoogle();
+      if (user) {
+        useAppStore.setState({ isAuthenticated: true, userId: user.uid });
+        router.replace('/(tabs)');
       }
     } catch (e: any) {
       const SIGN_IN_CANCELLED = '12501';

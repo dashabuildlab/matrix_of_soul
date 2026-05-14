@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MatrixData } from '../lib/matrix-calc';
-import { supabase } from '../lib/supabase';
 
 // ── Pending analysis (background PDF generation) ──────────────────────────────
 export type PendingAnalysisStatus = 'generating' | 'ready' | 'error' | 'cancelled';
@@ -248,17 +247,8 @@ export const useAppStore = create<AppState>()(
   knowledgeLevel: null,
   setUserProfile: (name, birthDate) => set({ userName: name, userBirthDate: birthDate }),
   pushToServer: async () => {
-    const state = get();
-    if (!state.userId) return;
-    try {
-      await supabase.from('profiles').upsert({
-        id: state.userId,
-        name: state.userName,
-        birth_date: state.userBirthDate,
-        knowledge_level: state.knowledgeLevel,
-        updated_at: new Date().toISOString(),
-      });
-    } catch { /* ignore network errors — local state is already saved */ }
+    // Profile sync handled by backend API via Firebase Auth token.
+    // Local state is the source of truth — nothing to push here.
   },
 
   savedMatrices: [],

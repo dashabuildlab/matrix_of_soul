@@ -14,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { Spacing, FontSize, BorderRadius, Colors } from '../constants/theme';
 import { StarBackground } from '../components/ui/StarBackground';
 import { useAppStore } from '../stores/useAppStore';
@@ -24,7 +23,7 @@ import { getEnergyById } from '../constants/energies';
 import { getPositionText } from '../constants/matrixTexts';
 import { askClaude } from '../lib/claude';
 import { useI18n } from '../lib/i18n';
-import { supabase } from '../lib/supabase';
+import { signInWithApple, signInWithGoogle } from '../lib/firebaseAuth';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Step = 'welcome' | 'intent' | 'gender' | 'dob' | 'generating' | 'aha' | 'registration';
@@ -879,20 +878,6 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
   );
 }
 
-// ─── Google Sign-In helper ─────────────────────────────────────────────────────
-function getGoogleSignin() {
-  try {
-    const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
-    GoogleSignin.configure({
-      webClientId: '113578995852-gphg055rh0mopfnub9iosj9d7crfujh1.apps.googleusercontent.com',
-      iosClientId: '113578995852-djgn7a9n3ideromo4k19rbkb51d02kcu.apps.googleusercontent.com',
-      scopes: ['email', 'profile'],
-    });
-    return { GoogleSignin, statusCodes };
-  } catch {
-    return null;
-  }
-}
 
 // ─── Step 8: Registration ──────────────────────────────────────────────────────
 function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => void }) {
@@ -910,18 +895,9 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
   const handleAppleSignIn = async () => {
     setLoadingApple(true);
     try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      if (credential.identityToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'apple',
-          token: credential.identityToken,
-        });
-        if (error) throw error;
+      const user = await signInWithApple();
+      if (user) {
+        useAppStore.setState({ isAuthenticated: true, userId: user.uid });
         onDone(true);
       }
     } catch (e: any) {
@@ -936,21 +912,9 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
   const handleGoogleSignIn = async () => {
     setLoadingGoogle(true);
     try {
-      const gs = getGoogleSignin();
-      if (!gs) {
-        Alert.alert(t.common.error, 'Google Sign-In недоступний у цьому середовищі');
-        return;
-      }
-      const { GoogleSignin, statusCodes } = gs;
-      await GoogleSignin.hasPlayServices();
-      await GoogleSignin.signIn();
-      const { idToken } = await GoogleSignin.getTokens();
-      if (idToken) {
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: idToken,
-        });
-        if (error) throw error;
+      const user = await signInWithGoogle();
+      if (user) {
+        useAppStore.setState({ isAuthenticated: true, userId: user.uid });
         onDone(true);
       }
     } catch (e: any) {
