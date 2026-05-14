@@ -41,8 +41,8 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
-    // @generated begin xml-fonts-init - expo prebuild (DO NOT MODIFY) sync-da39a3ee5e6b4b0d3255bfef95601890afd80709
-
+    // @generated begin xml-fonts-init - expo prebuild (DO NOT MODIFY) sync-3a11bdef1f975e8ac91bd0298456fc92449726b1
+    ReactFontManager.getInstance().addCustomFont(this, "ionicons", R.font.xml_ionicons)
     // @generated end xml-fonts-init
     DefaultNewArchitectureEntryPoint.releaseLevel = try {
       ReleaseLevel.valueOf(BuildConfig.REACT_NATIVE_RELEASE_LEVEL.uppercase())
