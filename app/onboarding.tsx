@@ -526,7 +526,7 @@ function BirthDateStep({ onNext, onBack }: {
 }
 
 // ─── Step 6: Generating ────────────────────────────────────────────────────────
-function GeneratingStep({ onDone }: { onDone: () => void }) {
+function GeneratingStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
   const { t } = useI18n();
   const GEN_STEPS = [
     t.onboarding.planStep1,
@@ -545,6 +545,7 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
   const pulseOpacity = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
+    let isMounted = true;
     Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
     // Pulsing orb animation
@@ -563,6 +564,7 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
 
     let idx = 0;
     const tick = () => {
+      if (!isMounted) return;
       if (idx >= GEN_STEPS.length - 1) {
         setStepIdx(GEN_STEPS.length - 1);
         setDone(true);
@@ -571,7 +573,7 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
           Animated.spring(checkScale, { toValue: 1, tension: 50, friction: 6, useNativeDriver: true }),
         ]).start();
         Animated.timing(progress, { toValue: 1, duration: 600, useNativeDriver: false }).start();
-        setTimeout(onDone, 1800);
+        setTimeout(() => { if (isMounted) onDone(); }, 1800);
         return;
       }
       idx++;
@@ -584,12 +586,18 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
       setTimeout(tick, 900);
     };
     setTimeout(tick, 800);
+    return () => { isMounted = false; };
   }, []);
 
   const progressWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <Animated.View style={[styles.planContainer, { opacity: fadeIn }]}>
+      {/* Back button */}
+      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+        <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
+      </TouchableOpacity>
+
       {/* Animated orb */}
       <View style={{ alignItems: 'center', marginBottom: 40 }}>
         <View style={styles.sphereWrap}>
@@ -651,7 +659,7 @@ function GeneratingStep({ onDone }: { onDone: () => void }) {
 }
 
 // ─── Step 7: Aha Teaser ────────────────────────────────────────────────────────
-function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: string }) {
+function AhaTeaserStep({ onNext, onBack, birthDate }: { onNext: () => void; onBack: () => void; birthDate: string }) {
   const { fadeIn, slideUp } = useEntrance();
   const { t, locale } = useI18n();
   const [aiTeaser, setAiTeaser]   = useState<string | null>(null);
@@ -720,6 +728,9 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.stepHeader}>
+          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
           <Text style={[styles.stepTitle, { marginTop: 12 }]}>{t.onboarding.ahaTitle}</Text>
         </View>
 
@@ -880,7 +891,7 @@ function AhaTeaserStep({ onNext, birthDate }: { onNext: () => void; birthDate: s
 
 
 // ─── Step 8: Registration ──────────────────────────────────────────────────────
-function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => void }) {
+function RegistrationStep({ onDone, onBack }: { onDone: (authenticated?: boolean) => void; onBack: () => void }) {
   const { t } = useI18n();
   const { fadeIn, slideUp } = useEntrance();
   const [loadingApple,  setLoadingApple]  = useState(false);
@@ -931,7 +942,10 @@ function RegistrationStep({ onDone }: { onDone: (authenticated?: boolean) => voi
     <Animated.View style={[{ flex: 1 }, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
       <View style={{ flex: 1, paddingHorizontal: Spacing.lg }}>
         <View style={styles.stepHeader}>
-          <Text style={[styles.stepTitle, { marginTop: 12 }]}>{t.onboarding.registrationTitle}</Text>
+          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+          <Text style={[styles.stepTitle, { marginTop: 4 }]}>{t.onboarding.registrationTitle}</Text>
           <Text style={styles.stepSub}>{t.onboarding.registrationSub}</Text>
         </View>
 
@@ -1097,13 +1111,13 @@ export default function OnboardingScreen() {
           />
         )}
         {step === 'generating' && (
-          <GeneratingStep onDone={() => setStep('aha')} />
+          <GeneratingStep onDone={() => setStep('aha')} onBack={() => setStep('dob')} />
         )}
         {step === 'aha' && (
-          <AhaTeaserStep onNext={() => setStep('registration')} birthDate={birthDate} />
+          <AhaTeaserStep onNext={() => setStep('registration')} onBack={() => setStep('dob')} birthDate={birthDate} />
         )}
         {step === 'registration' && (
-          <RegistrationStep onDone={handleDone} />
+          <RegistrationStep onDone={handleDone} onBack={() => setStep('aha')} />
         )}
 
         <ProgressBar step={step} />
