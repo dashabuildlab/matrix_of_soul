@@ -4,7 +4,7 @@ import {
   TouchableOpacity, Dimensions, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Ionicons from '@/components/ui/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
 import { PurchasesPackage, PACKAGE_TYPE } from 'react-native-purchases';
@@ -26,9 +26,9 @@ interface FallbackPlan {
 }
 
 const FALLBACK_PLANS: FallbackPlan[] = [
-  { id: 'annual',  label: 'Рік',     priceString: '$49.99', perMonth: '$4.17/міс',  savings: 'Економія 58%', isBest: true,  plan: 'yearly'  },
-  { id: 'monthly', label: 'Місяць',  priceString: '$9.99',  perMonth: null,          savings: null,           isBest: false, plan: 'monthly' },
-  { id: 'weekly',  label: 'Тиждень', priceString: '$3.99',  perMonth: '$17.29/міс', savings: null,           isBest: false, plan: 'weekly'  },
+  { id: 'annual',  label: 'Рік',     priceString: '$14.99', perMonth: '$1.25/міс',  savings: 'Економія 74%', isBest: true,  plan: 'yearly'  },
+  { id: 'monthly', label: 'Місяць',  priceString: '$3.99',  perMonth: null,          savings: null,           isBest: false, plan: 'monthly' },
+  { id: 'weekly',  label: 'Тиждень', priceString: '$2.99',  perMonth: '$12.96/міс', savings: null,           isBest: false, plan: 'weekly'  },
 ];
 
 const { width } = Dimensions.get('window');
