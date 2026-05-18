@@ -12,6 +12,8 @@ import { onAuthStateChanged } from '../lib/firebaseAuth';
 import { initializeNotifications } from '../lib/notifications';
 import { useAppStore, Achievement } from '../stores/useAppStore';
 import { I18nProvider, useI18n } from '../lib/i18n';
+import { checkForUpdate, UpdateInfo } from '../lib/updateCheck';
+import { UpdateModal } from '../components/UpdateModal';
 
 // Keep native splash visible until auth state + onboarding are resolved.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -113,6 +115,7 @@ function AppInit() {
   const [loading, setLoading] = useState(true);
   const [achievementToast, setAchievementToast] = useState<Achievement | null>(null);
   const [streakToast, setStreakToast] = useState<number | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   const checkAndUpdateStreak = useAppStore((s) => s.checkAndUpdateStreak);
   const checkAchievements = useAppStore((s) => s.checkAchievements);
@@ -140,6 +143,11 @@ function AppInit() {
       }
 
       setLoading(false);
+
+      // Check for update after UI is ready (non-blocking)
+      checkForUpdate().then((info) => {
+        if (info) setUpdateInfo(info);
+      }).catch(() => {});
     };
 
     init();
@@ -294,6 +302,15 @@ function AppInit() {
       )}
       {streakToast !== null && !achievementToast && (
         <StreakToast streak={streakToast} onHide={() => setStreakToast(null)} />
+      )}
+
+      {updateInfo && (
+        <UpdateModal
+          visible
+          latestVersion={updateInfo.latestVersion}
+          storeUrl={updateInfo.storeUrl}
+          onDismiss={() => setUpdateInfo(null)}
+        />
       )}
     </>
   );
